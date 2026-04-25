@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import {
+  collection, addDoc, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp
+} from 'firebase/firestore';
+import { db, auth } from '../../firebase';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
@@ -143,18 +145,32 @@ export default function QuizBuilder() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Save draft to localStorage whenever title or questions change
+  // Debounced save to Firestore draft
   useEffect(() => {
-    // Don't overwrite a saved draft with empty state on first load
-    if (!title && questions.length === 0) return;
-    const draft = { title, questions };
-    localStorage.setItem('quiz-draft', JSON.stringify(draft));
-  }, [title, questions]);
+    if (isEditing) return // don't save drafts when editing existing quiz
+    if (!title && questions.length === 0) return
+
+    const timer = setTimeout(async () => {
+      const uid = auth.currentUser?.uid
+      if (!uid) return
+      try {
+        await setDoc(doc(db, 'drafts', uid), {
+          title,
+          questions,
+          phase,
+          savedAt: serverTimestamp()
+        })
+      } catch (e) {
+        console.error('Draft save failed:', e)
+      }
+    }, 1000) // wait 1 second after last change before saving
+
+    return () => clearTimeout(timer)
+  }, [title, questions, phase, isEditing]);
 
   // Restore draft on mount
   useEffect(() => {
     if (isEditing) {
-      // Load from Firestore as before
       async function load() {
         const snap = await getDoc(doc(db, 'quizzes', quizId));
         if (snap.exists()) {
@@ -166,21 +182,25 @@ export default function QuizBuilder() {
       }
       load();
     } else {
-      // Restore draft from localStorage if it exists
-      const saved = localStorage.getItem('quiz-draft');
-      if (saved) {
+      // Restore draft from Firestore
+      async function loadDraft() {
+        const uid = auth.currentUser?.uid
+        if (!uid) return
         try {
-          const draft = JSON.parse(saved);
-          if (draft.title || draft.questions?.length > 0) {
-            setTitle(draft.title || '');
-            setQuestions(draft.questions || []);
-            // Skip naming phase if title already exists
-            if (draft.title) setPhase('building');
+          const snap = await getDoc(doc(db, 'drafts', uid))
+          if (snap.exists()) {
+            const draft = snap.data()
+            if (draft.title || draft.questions?.length > 0) {
+              setTitle(draft.title || '')
+              setQuestions(draft.questions || [])
+              if (draft.phase) setPhase(draft.phase)
+            }
           }
         } catch (e) {
-          localStorage.removeItem('quiz-draft');
+          console.error('Draft load failed:', e)
         }
       }
+      loadDraft()
     }
   }, [quizId, isEditing]);
 
@@ -262,7 +282,11 @@ export default function QuizBuilder() {
       } else {
         payload.createdAt = serverTimestamp();
         await addDoc(collection(db, 'quizzes'), payload);
-        localStorage.removeItem('quiz-draft');
+
+        // Clear the draft
+        const uid = auth.currentUser?.uid
+        if (uid) await deleteDoc(doc(db, 'drafts', uid))
+
         setSuccess('Quiz published successfully.');
       }
 
@@ -348,8 +372,9 @@ export default function QuizBuilder() {
               <div className="builder-footer-actions">
                 <button
                   className="btn btn-ghost"
-                  onClick={() => {
-                    localStorage.removeItem('quiz-draft');
+                  onClick={async () => {
+                    const uid = auth.currentUser?.uid
+                    if (uid) await deleteDoc(doc(db, 'drafts', uid))
                     navigate('/admin/quizzes');
                   }}
                 >
