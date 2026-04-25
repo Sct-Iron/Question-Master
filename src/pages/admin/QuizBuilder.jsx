@@ -5,6 +5,29 @@ import { db } from '../../firebase';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
+const DRAFT_KEY = 'quizBuilderDraft';
+
+function loadDraft() {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to save draft:', e);
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 function QuestionForm({ initial, onSave, onCancel }) {
   const [qType, setQType] = useState(initial?.type || 'mcq');
   const [text, setText] = useState(initial?.text || '');
@@ -143,6 +166,24 @@ export default function QuizBuilder() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Load draft on mount (only for new quizzes)
+  useEffect(() => {
+    if (isEditing) return;
+    const draft = loadDraft();
+    if (draft) {
+      setTitle(draft.title || '');
+      setTimeLimitMinutes(draft.timeLimitMinutes || '');
+      setQuestions(draft.questions || []);
+      if (draft.phase) setPhase(draft.phase);
+    }
+  }, [isEditing]);
+
+  // Auto-save draft whenever state changes (only for new quizzes)
+  useEffect(() => {
+    if (isEditing) return;
+    saveDraft({ phase, title, timeLimitMinutes, questions });
+  }, [phase, title, timeLimitMinutes, questions, isEditing]);
+
   useEffect(() => {
     if (!isEditing) return;
 
@@ -168,6 +209,7 @@ export default function QuizBuilder() {
 
     setError('');
     setPhase('building');
+    if (!isEditing) saveDraft({ phase: 'building', title, timeLimitMinutes, questions });
   }
 
   function saveQuestion(question) {
@@ -237,6 +279,7 @@ export default function QuizBuilder() {
       } else {
         payload.createdAt = serverTimestamp();
         await addDoc(collection(db, 'quizzes'), payload);
+        clearDraft();
         setSuccess('Quiz published successfully.');
       }
 
@@ -286,6 +329,27 @@ export default function QuizBuilder() {
               </div>
 
               {error && <div className="auth-error page-alert">{error}</div>}
+
+              {!isEditing && (title || questions.length > 0) && (
+                <div className="builder-draft-indicator">
+                  <span>You have an unsaved draft.</span>
+                  <button
+                    type="button"
+                    className="builder-clear-draft"
+                    onClick={() => {
+                      if (window.confirm('Clear your saved progress? This cannot be undone.')) {
+                        clearDraft();
+                        setTitle('');
+                        setTimeLimitMinutes('');
+                        setQuestions([]);
+                        setPhase('naming');
+                      }
+                    }}
+                  >
+                    Clear draft
+                  </button>
+                </div>
+              )}
 
               <div className="builder-settings-grid">
                 <div className="input-group">
