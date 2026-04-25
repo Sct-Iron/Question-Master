@@ -5,29 +5,6 @@ import { db } from '../../firebase';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
-const DRAFT_KEY = 'quizBuilderDraft';
-
-function loadDraft() {
-  try {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    return saved ? JSON.parse(saved) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(data) {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.warn('Failed to save draft:', e);
-  }
-}
-
-function clearDraft() {
-  localStorage.removeItem(DRAFT_KEY);
-}
-
 function QuestionForm({ initial, onSave, onCancel }) {
   const [qType, setQType] = useState(initial?.type || 'mcq');
   const [text, setText] = useState(initial?.text || '');
@@ -166,39 +143,45 @@ export default function QuizBuilder() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Load draft on mount (only for new quizzes)
+  // Save draft to localStorage whenever title or questions change
   useEffect(() => {
-    if (isEditing) return;
-    const draft = loadDraft();
-    if (draft) {
-      setTitle(draft.title || '');
-      setTimeLimitMinutes(draft.timeLimitMinutes || '');
-      setQuestions(draft.questions || []);
-      if (draft.phase) setPhase(draft.phase);
+    // Don't overwrite a saved draft with empty state on first load
+    if (!title && questions.length === 0) return;
+    const draft = { title, questions };
+    localStorage.setItem('quiz-draft', JSON.stringify(draft));
+  }, [title, questions]);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (isEditing) {
+      // Load from Firestore as before
+      async function load() {
+        const snap = await getDoc(doc(db, 'quizzes', quizId));
+        if (snap.exists()) {
+          const data = snap.data();
+          setTitle(data.title);
+          setQuestions(data.questions || []);
+          setPhase('building');
+        }
+      }
+      load();
+    } else {
+      // Restore draft from localStorage if it exists
+      const saved = localStorage.getItem('quiz-draft');
+      if (saved) {
+        try {
+          const draft = JSON.parse(saved);
+          if (draft.title || draft.questions?.length > 0) {
+            setTitle(draft.title || '');
+            setQuestions(draft.questions || []);
+            // Skip naming phase if title already exists
+            if (draft.title) setPhase('building');
+          }
+        } catch (e) {
+          localStorage.removeItem('quiz-draft');
+        }
+      }
     }
-  }, [isEditing]);
-
-  // Auto-save draft whenever state changes (only for new quizzes)
-  useEffect(() => {
-    if (isEditing) return;
-    saveDraft({ phase, title, timeLimitMinutes, questions });
-  }, [phase, title, timeLimitMinutes, questions, isEditing]);
-
-  useEffect(() => {
-    if (!isEditing) return;
-
-    async function load() {
-      const snap = await getDoc(doc(db, 'quizzes', quizId));
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-      setTitle(data.title || '');
-      setTimeLimitMinutes(data.timeLimitMinutes ? String(data.timeLimitMinutes) : '');
-      setQuestions(data.questions || []);
-      setPhase('building');
-    }
-
-    load();
   }, [quizId, isEditing]);
 
   function startBuilding() {
@@ -279,7 +262,7 @@ export default function QuizBuilder() {
       } else {
         payload.createdAt = serverTimestamp();
         await addDoc(collection(db, 'quizzes'), payload);
-        clearDraft();
+        localStorage.removeItem('quiz-draft');
         setSuccess('Quiz published successfully.');
       }
 
@@ -330,27 +313,6 @@ export default function QuizBuilder() {
 
               {error && <div className="auth-error page-alert">{error}</div>}
 
-              {!isEditing && (title || questions.length > 0) && (
-                <div className="builder-draft-indicator">
-                  <span>You have an unsaved draft.</span>
-                  <button
-                    type="button"
-                    className="builder-clear-draft"
-                    onClick={() => {
-                      if (window.confirm('Clear your saved progress? This cannot be undone.')) {
-                        clearDraft();
-                        setTitle('');
-                        setTimeLimitMinutes('');
-                        setQuestions([]);
-                        setPhase('naming');
-                      }
-                    }}
-                  >
-                    Clear draft
-                  </button>
-                </div>
-              )}
-
               <div className="builder-settings-grid">
                 <div className="input-group">
                   <label className="input-label" htmlFor="quiz-title">Quiz Title</label>
@@ -384,7 +346,13 @@ export default function QuizBuilder() {
               </div>
 
               <div className="builder-footer-actions">
-                <button className="btn btn-ghost" onClick={() => navigate('/admin/quizzes')}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    localStorage.removeItem('quiz-draft');
+                    navigate('/admin/quizzes');
+                  }}
+                >
                   Cancel
                 </button>
                 <button className="btn btn-primary" onClick={startBuilding}>
