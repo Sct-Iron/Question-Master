@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { useNavigate } from 'react-router-dom'
 import { ADMIN_EMAIL } from '../config/admin'
@@ -292,6 +292,47 @@ const css = `
     background: #EEEDFE;
   }
 
+  .auth-role-selector {
+    display: flex;
+    gap: 0;
+    margin-bottom: 18px;
+    background: #F3F2FC;
+    border-radius: 10px;
+    padding: 4px;
+    border: 1.5px solid #E8E6F8;
+  }
+
+  .auth-role-option {
+    flex: 1;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    background: transparent;
+    color: #888;
+    transition: all 0.2s ease;
+  }
+
+  .auth-role-option.active {
+    background: #534AB7;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(83, 74, 183, 0.3);
+  }
+
+  .auth-role-option:not(.active):hover {
+    color: #534AB7;
+  }
+
+  .auth-role-hint {
+    font-size: 11.5px;
+    color: #999;
+    margin: -10px 0 18px 2px;
+    line-height: 1.4;
+  }
+
   @media (max-width: 768px) {
     .auth-root { flex-direction: column; }
 
@@ -333,6 +374,7 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [selectedRole, setSelectedRole] = useState('student')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
@@ -353,24 +395,60 @@ export default function Auth() {
       if (mode === 'login') {
         const { user } = await signInWithEmailAndPassword(auth, email, password)
         const userEmail = user.email?.trim().toLowerCase() || ''
-        const role = userEmail === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'student'
-        navigate(role === 'admin' ? '/admin/dashboard' : '/student/take-quiz', { replace: true })
+        const isSuper = userEmail === ADMIN_EMAIL.toLowerCase()
+
+        if (isSuper) {
+          navigate('/admin/dashboard', { replace: true })
+        } else {
+          // Read role + status from Firestore
+          try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid))
+            if (userDoc.exists()) {
+              const data = userDoc.data()
+              const userRole = data.role || 'student'
+              const userStatus = data.status || 'approved'
+
+              if (userRole === 'admin' && userStatus === 'pending') {
+                navigate('/pending-approval', { replace: true })
+              } else if (userRole === 'admin' && userStatus === 'approved') {
+                navigate('/admin/dashboard', { replace: true })
+              } else {
+                navigate('/student/take-quiz', { replace: true })
+              }
+            } else {
+              navigate('/student/take-quiz', { replace: true })
+            }
+          } catch (e) {
+            console.warn('Could not fetch user profile:', e.message)
+            navigate('/student/take-quiz', { replace: true })
+          }
+        }
       } else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password)
-        const role = email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'student'
+        const userEmail = email.trim().toLowerCase()
+        const isSuper = userEmail === ADMIN_EMAIL.toLowerCase()
+        const role = isSuper ? 'admin' : selectedRole
+        const status = (isSuper || selectedRole === 'student') ? 'approved' : 'pending'
 
         try {
           await setDoc(doc(db, 'users', user.uid), {
             name: name.trim(),
-            email: email.trim().toLowerCase(),
+            email: userEmail,
             role,
+            status,
             createdAt: new Date()
           })
         } catch (firestoreErr) {
           console.warn('Could not save user profile to Firestore:', firestoreErr.message)
         }
 
-        navigate(role === 'admin' ? '/admin/dashboard' : '/student/take-quiz', { replace: true })
+        if (role === 'admin' && status === 'pending') {
+          navigate('/pending-approval', { replace: true })
+        } else if (role === 'admin') {
+          navigate('/admin/dashboard', { replace: true })
+        } else {
+          navigate('/student/take-quiz', { replace: true })
+        }
       }
     } catch (err) {
       const code = err.code || ''
@@ -398,6 +476,7 @@ export default function Auth() {
     setEmail('')
     setPassword('')
     setConfirmPassword('')
+    setSelectedRole('student')
   }
 
   return (
@@ -453,19 +532,46 @@ export default function Auth() {
 
             <form onSubmit={handleSubmit}>
               {mode === 'signup' && (
-                <div className="auth-field">
-                  <label htmlFor="auth-name">User Name</label>
-                  <input
-                    id="auth-name"
-                    type="text"
-                    placeholder="e.g. Chidi Okeke"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    autoComplete="name"
-                    autoFocus
-                  />
-                </div>
+                <>
+                  <div className="auth-field">
+                    <label htmlFor="auth-name">User Name</label>
+                    <input
+                      id="auth-name"
+                      type="text"
+                      placeholder="e.g. Chidi Okeke"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoComplete="name"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="auth-field">
+                    <label>I am signing up as</label>
+                    <div className="auth-role-selector">
+                      <button
+                        type="button"
+                        className={`auth-role-option ${selectedRole === 'student' ? 'active' : ''}`}
+                        onClick={() => setSelectedRole('student')}
+                      >
+                        Student
+                      </button>
+                      <button
+                        type="button"
+                        className={`auth-role-option ${selectedRole === 'admin' ? 'active' : ''}`}
+                        onClick={() => setSelectedRole('admin')}
+                      >
+                        Admin
+                      </button>
+                    </div>
+                    {selectedRole === 'admin' && (
+                      <p className="auth-role-hint">
+                        Admin accounts require approval from the super admin before gaining access.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
 
               <div className="auth-field">

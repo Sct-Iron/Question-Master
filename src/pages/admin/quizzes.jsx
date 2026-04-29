@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useAuth } from '../../context/AuthContext';
 import { MenuIcon, PencilIcon, QuizIcon } from '../../components/Icons';
 
 export default function Quizzes() {
   const navigate = useNavigate();
   const { setSidebarOpen } = useOutletContext();
+  const { user, isSuperAdmin } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,6 +105,7 @@ export default function Quizzes() {
                     })
                   : '';
                 const isPendingDelete = deleteTarget === quiz.id;
+                const canDelete = isSuperAdmin || quiz.createdBy?.uid === user?.uid;
 
                 return (
                   <article key={quiz.id} className="page-panel admin-list-card">
@@ -116,6 +119,7 @@ export default function Quizzes() {
                         </div>
                         <p>
                           {qCount} question{qCount !== 1 ? 's' : ''}
+                          {quiz.createdBy?.name ? ` • By ${quiz.createdBy.name}` : ''}
                           {dateStr ? ` • ${dateStr}` : ''}
                         </p>
                       </div>
@@ -125,9 +129,11 @@ export default function Quizzes() {
                           <PencilIcon size={14} />
                           Edit
                         </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(quiz.id)}>
-                          Delete
-                        </button>
+                        {canDelete && (
+                          <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(quiz.id)}>
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
 

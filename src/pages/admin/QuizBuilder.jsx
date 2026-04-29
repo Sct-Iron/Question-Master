@@ -4,6 +4,7 @@ import {
   collection, addDoc, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
@@ -133,6 +134,7 @@ export default function QuizBuilder() {
   const navigate = useNavigate();
   const { setSidebarOpen } = useOutletContext();
   const { quizId } = useParams();
+  const { user, userName } = useAuth();
   const isEditing = Boolean(quizId);
 
   const [phase, setPhase] = useState('naming');
@@ -281,6 +283,11 @@ export default function QuizBuilder() {
         setSuccess('Quiz updated successfully.');
       } else {
         payload.createdAt = serverTimestamp();
+        payload.createdBy = {
+          uid: user?.uid || '',
+          name: userName || '',
+          email: user?.email || ''
+        };
         await addDoc(collection(db, 'quizzes'), payload);
 
         // Clear the draft

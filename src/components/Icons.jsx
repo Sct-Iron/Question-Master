@@ -219,3 +219,32 @@ export function AlertIcon(props) {
     </BaseIcon>
   );
 }
+
+export function ShieldIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+    </BaseIcon>
+  );
+}
+
+export function UserCheckIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <polyline points="16 11 18 13 22 9" />
+    </BaseIcon>
+  );
+}
+
+export function RefreshIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+      <path d="M21 21v-5h-5" />
+    </BaseIcon>
+  );
+}

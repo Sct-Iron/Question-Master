@@ -194,6 +194,7 @@ export default function Dashboard() {
                           <div className="quiz-item-title">{quiz.title || 'Untitled Quiz'}</div>
                           <div className="quiz-item-meta">
                             <span>{quiz.questions?.length || 0} question{(quiz.questions?.length || 0) !== 1 ? 's' : ''}</span>
+                            {quiz.createdBy?.name && <span>By {quiz.createdBy.name}</span>}
                             <span>{formatDate(quiz.createdAt)}</span>
                           </div>
                         </div>

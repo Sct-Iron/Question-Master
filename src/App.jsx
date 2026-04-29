@@ -9,8 +9,10 @@ import Dashboard from './pages/admin/Dashboard';
 import QuizBuilder from './pages/admin/QuizBuilder';
 import Quizzes from './pages/admin/quizzes';
 import Marking from './pages/admin/Marking';
+import AdminApproval from './pages/admin/AdminApproval';
 import TakeQuiz from './pages/student/TakeQuiz';
 import ViewResults from './pages/student/ViewResults';
+import PendingApproval from './pages/PendingApproval';
 
 function App() {
   return (
@@ -19,6 +21,9 @@ function App() {
         <Routes>
           {/* Public: auth screen */}
           <Route path="/auth" element={<Auth />} />
+
+          {/* Pending approval screen (for unapproved admins) */}
+          <Route path="/pending-approval" element={<PendingApproval />} />
 
           {/* Admin-only routes */}
           <Route
@@ -35,6 +40,7 @@ function App() {
             <Route path="quiz-builder" element={<QuizBuilder />} />
             <Route path="quiz-builder/:quizId" element={<QuizBuilder />} />
             <Route path="marking" element={<Marking />} />
+            <Route path="admin-approvals" element={<AdminApproval />} />
           </Route>
 
           {/* Student-only routes */}

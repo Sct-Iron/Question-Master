@@ -1,17 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
-import { DashboardIcon, LogoutIcon, MarkingIcon, PencilIcon, QuizIcon } from './Icons';
+import { collection, getDocs } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
+import { DashboardIcon, LogoutIcon, MarkingIcon, PencilIcon, QuizIcon, ShieldIcon } from './Icons';
 
 function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isSuperAdmin } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/auth', { replace: true });
   };
+
+  // Fetch pending admin count for badge (super admin only)
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    async function fetchPendingCount() {
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const pending = usersSnap.docs.filter(d => {
+          const data = d.data();
+          return data.role === 'admin' && data.status === 'pending';
+        });
+        setPendingCount(pending.length);
+      } catch (e) {
+        console.warn('Could not fetch pending admin count:', e.message);
+      }
+    }
+    fetchPendingCount();
+  }, [isSuperAdmin]);
 
   return (
     <div className="admin-layout">
@@ -69,6 +91,23 @@ function AdminLayout() {
             <span className="sidebar-link-icon"><MarkingIcon /></span>
             Marking
           </NavLink>
+
+          {isSuperAdmin && (
+            <>
+              <span className="sidebar-section-label">Management</span>
+              <NavLink
+                to="/admin/admin-approvals"
+                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="sidebar-link-icon"><ShieldIcon /></span>
+                Admin Approvals
+                {pendingCount > 0 && (
+                  <span className="sidebar-badge">{pendingCount}</span>
+                )}
+              </NavLink>
+            </>
+          )}
 
           <span className="sidebar-section-label" style={{ marginTop: 'auto' }}>Account</span>
         </nav>
