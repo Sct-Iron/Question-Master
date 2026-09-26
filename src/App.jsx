@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/protectedRoutes';
 import Auth from './components/auth';
@@ -13,6 +13,11 @@ import AdminApproval from './pages/admin/AdminApproval';
 import TakeQuiz from './pages/student/TakeQuiz';
 import ViewResults from './pages/student/ViewResults';
 import PendingApproval from './pages/PendingApproval';
+
+function NewQuizBuilder() {
+  const location = useLocation();
+  return <QuizBuilder key={location.key} />;
+}
 
 function App() {
   return (
@@ -37,7 +42,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="quizzes" element={<Quizzes />} />
-            <Route path="quiz-builder" element={<QuizBuilder />} />
+            <Route path="quiz-builder" element={<NewQuizBuilder />} />
             <Route path="quiz-builder/:quizId" element={<QuizBuilder />} />
             <Route path="marking" element={<Marking />} />
             <Route path="admin-approvals" element={<AdminApproval />} />

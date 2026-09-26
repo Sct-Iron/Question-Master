@@ -680,7 +680,7 @@ export default function Auth() {
 
             <button className="auth-toggle" type="button" onClick={toggleMode}>
               {mode === 'login'
-                ? 'Create a new account'
+                ? 'Create a new account'      
                 : 'Already have an account? Sign in'}
             </button>
           </div>

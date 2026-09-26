@@ -4,6 +4,9 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { ADMIN_EMAIL } from '../config/admin';
 
+const normalizeRole = (value) => String(value || 'student').trim().toLowerCase();
+const normalizeStatus = (value) => String(value || 'approved').trim().toLowerCase();
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -42,9 +45,8 @@ export function AuthProvider({ children }) {
             const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
             if (userDoc.exists()) {
               const data = userDoc.data();
-              setRole(data.role || 'student');
-              // Backward compatibility: old docs without status get 'approved'
-              setStatus(data.status || 'approved');
+              setRole(normalizeRole(data.role));
+              setStatus(normalizeStatus(data.status));
               setUserName(data.name || '');
             } else {
               // No Firestore doc — fallback to student
@@ -81,8 +83,8 @@ export function AuthProvider({ children }) {
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
-        setRole(data.role || 'student');
-        setStatus(data.status || 'approved');
+        setRole(normalizeRole(data.role));
+        setStatus(normalizeStatus(data.status));
         setUserName(data.name || '');
       }
     } catch (e) {

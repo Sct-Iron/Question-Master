@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -159,7 +159,14 @@ export default function PendingApproval() {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('');
 
-  const isRejected = status === 'rejected';
+  const isRejected = String(status || '').trim().toLowerCase() === 'rejected';
+  const isApproved = String(status || '').trim().toLowerCase() === 'approved' && String(role || '').trim().toLowerCase() === 'admin';
+
+  useEffect(() => {
+    if (isApproved) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [isApproved, navigate]);
 
   async function handleRefresh() {
     setChecking(true);
@@ -171,9 +178,6 @@ export default function PendingApproval() {
       setChecking(false);
     }, 800);
   }
-
-  // If status changed to approved, allow navigation
-  const isApproved = status === 'approved' && role === 'admin';
 
   async function handleLogout() {
     await signOut(auth);

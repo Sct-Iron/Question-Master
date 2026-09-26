@@ -147,6 +147,22 @@ export default function QuizBuilder() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  async function saveDraft(draft = {}) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    try {
+      await setDoc(doc(db, 'drafts', uid), {
+        title,
+        questions,
+        timeLimitMinutes,
+        savedAt: serverTimestamp(),
+        ...draft,
+      });
+    } catch (e) {
+      console.error('Draft save failed:', e);
+    }
+  }
+
   // Debounced save to Firestore draft
   useEffect(() => {
     if (isEditing) return // don't save drafts when editing existing quiz
@@ -159,7 +175,7 @@ export default function QuizBuilder() {
         await setDoc(doc(db, 'drafts', uid), {
           title,
           questions,
-          phase,
+          timeLimitMinutes,
           savedAt: serverTimestamp()
         })
       } catch (e) {
@@ -168,9 +184,11 @@ export default function QuizBuilder() {
     }, 1000) // wait 1 second after last change before saving
 
     return () => clearTimeout(timer)
-  }, [title, questions, phase, isEditing]);
+  }, [title, questions, timeLimitMinutes, isEditing]);
 
-  // Restore draft on mount
+  // Editing loads the quiz from its URL. A visit to the new-quiz route must
+  // always start a fresh quiz; otherwise an old draft can look like an
+  // existing quiz (for example, the previously created Biology quiz).
   useEffect(() => {
     if (isEditing) {
       async function load() {
@@ -184,25 +202,12 @@ export default function QuizBuilder() {
       }
       load();
     } else {
-      // Restore draft from Firestore
-      async function loadDraft() {
-        const uid = auth.currentUser?.uid
-        if (!uid) return
-        try {
-          const snap = await getDoc(doc(db, 'drafts', uid))
-          if (snap.exists()) {
-            const draft = snap.data()
-            if (draft.title || draft.questions?.length > 0) {
-              setTitle(draft.title || '')
-              setQuestions(draft.questions || [])
-              if (draft.phase) setPhase(draft.phase)
-            }
-          }
-        } catch (e) {
-          console.error('Draft load failed:', e)
-        }
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        deleteDoc(doc(db, 'drafts', uid)).catch((e) => {
+          console.error('Stale draft cleanup failed:', e);
+        });
       }
-      loadDraft()
     }
   }, [quizId, isEditing]);
 
