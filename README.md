@@ -49,6 +49,4 @@ It provides separate experiences for administrators and students:
 - ESLint
 - Vercel-ready deployment configuration
 
-## Live App
-
-- App is live on question-master01.vercel.app
+**Live application:** [question-master01.vercel.app](https://question-master01.vercel.app)
