@@ -1,11 +1,13 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { useOutletContext } from 'react-router-dom';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { AlertIcon, ArrowLeftIcon, CheckCircleIcon, QuizIcon, SearchIcon, TimerIcon } from '../../components/Icons';
 import { formatRemainingTime, formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
 export default function TakeQuiz() {
+  const { setQuizInProgress } = useOutletContext();
   const { user } = useAuth();
   const [view, setView] = useState('browse');
   const [quizzes, setQuizzes] = useState([]);
@@ -23,16 +25,18 @@ export default function TakeQuiz() {
     async function fetchData() {
       setLoading(true);
       try {
-        const quizSnap = await getDocs(collection(db, 'quizzes'));
+        const [quizSnap, subSnap] = await Promise.all([
+          getDocs(query(collection(db, 'quizzes'), where('isPublished', '==', true))),
+          user?.uid
+            ? getDocs(query(collection(db, 'submissions'), where('studentId', '==', user.uid)))
+            : Promise.resolve(null),
+        ]);
         const published = quizSnap.docs
           .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-          .filter((quiz) => quiz.isPublished)
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setQuizzes(published);
 
-        if (user?.uid) {
-          const subQuery = query(collection(db, 'submissions'), where('studentId', '==', user.uid));
-          const subSnap = await getDocs(subQuery);
+        if (subSnap) {
           const taken = new Set(subSnap.docs.map((docSnap) => docSnap.data().quizId));
           setTakenQuizIds(taken);
         }
@@ -72,6 +76,7 @@ export default function TakeQuiz() {
     setSubmittedByTimer(false);
     setRemainingSeconds(minutes ? minutes * 60 : null);
     setView('quiz');
+    setQuizInProgress(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -155,6 +160,7 @@ export default function TakeQuiz() {
       setTakenQuizIds((prev) => new Set([...prev, activeQuiz.id]));
       setSubmittedByTimer(forceSubmit && remainingSeconds === 0);
       setView('submitted');
+      setQuizInProgress(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Submit error:', err);
@@ -219,6 +225,7 @@ export default function TakeQuiz() {
                 setActiveQuiz(null);
                 setAnswers({});
                 setRemainingSeconds(null);
+                setQuizInProgress(false);
               }}
             >
               <ArrowLeftIcon size={16} />
@@ -316,6 +323,7 @@ export default function TakeQuiz() {
                 setActiveQuiz(null);
                 setAnswers({});
                 setRemainingSeconds(null);
+                setQuizInProgress(false);
               }
             }}
           >

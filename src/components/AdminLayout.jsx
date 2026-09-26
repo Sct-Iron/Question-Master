@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { DashboardIcon, LogoutIcon, MarkingIcon, PencilIcon, QuizIcon, ShieldIcon } from './Icons';
+import { DashboardIcon, LogoutIcon, MarkingIcon, PencilIcon, QuestionMasterMark, QuizIcon, ShieldIcon } from './Icons';
 
 function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,7 +45,7 @@ function AdminLayout() {
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="sidebar-logo">Q</div>
+            <div className="sidebar-logo"><QuestionMasterMark size={48} /></div>
             <div>
               <div className="sidebar-brand-text">Question Master</div>
               <div className="sidebar-brand-sub">Admin Panel</div>

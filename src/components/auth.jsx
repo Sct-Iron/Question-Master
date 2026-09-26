@@ -4,6 +4,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { useNavigate } from 'react-router-dom'
 import { ADMIN_EMAIL } from '../config/admin'
+import { QuestionMasterMark } from './Icons'
 
 const injectFonts = () => {
   if (document.getElementById('auth-fonts')) return
@@ -63,13 +64,8 @@ const css = `
   }
 
   .auth-logo-mark {
-    width: 40px; height: 40px;
-    background: #534AB7;
-    border-radius: 10px;
+    width: 42px; height: 42px;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Playfair Display', serif;
-    font-size: 20px; font-weight: 700;
-    color: #fff;
     flex-shrink: 0;
   }
 
@@ -485,7 +481,7 @@ export default function Auth() {
       <div className="auth-root">
         <div className="auth-panel-left">
           <div className="auth-logo-row">
-            <div className="auth-logo-mark">Q</div>
+            <div className="auth-logo-mark"><QuestionMasterMark size={42} /></div>
             <span className="auth-logo-text">Question Master</span>
           </div>
 

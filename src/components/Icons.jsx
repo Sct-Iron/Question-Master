@@ -17,6 +17,19 @@ function BaseIcon({ children, className = '', size = 18, strokeWidth = 1.9 }) {
   );
 }
 
+export function QuestionMasterMark({ size = 48, className = '' }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="44" height="44" rx="14" fill="#0B7C72" />
+      <path d="M9 15.5c4.9-2.2 9.9-1.9 15 1.1v20.2c-5.1-3-10.1-3.3-15-1.1V15.5Z" fill="#F7FFFD" />
+      <path d="M39 15.5c-4.9-2.2-9.9-1.9-15 1.1v20.2c5.1-3 10.1-3.3 15-1.1V15.5Z" fill="#D8F1EC" />
+      <path d="M24 16.6v20.2" stroke="#0B7C72" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="35.5" cy="12.5" r="7.5" fill="#F4A261" />
+      <path d="M33.2 10.6a2.6 2.6 0 1 1 4.1 2.1c-1 .7-1.8 1-1.8 2.2M35.5 17.8h.01" stroke="#3A2209" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MenuIcon(props) {
   return (
     <BaseIcon {...props}>
