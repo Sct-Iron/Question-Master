@@ -47,12 +47,16 @@ export default function Marking() {
 
     const submission = submissions.find((item) => item.id === subId);
     const answer = submission?.answers?.[qIndex];
-    if (answer?.score !== null && answer?.score !== undefined) return normalizeEssayScore(answer.score);
+    if (answer?.score !== null && answer?.score !== undefined) {
+      return normalizeEssayScore(answer.score, answer.maxPoints);
+    }
     return '';
   }
 
   function setEssayScoreLocal(subId, qIndex, value) {
-    const normalized = value === '' ? '' : normalizeEssayScore(value);
+    const submission = submissions.find((item) => item.id === subId);
+    const answer = submission?.answers?.[qIndex];
+    const normalized = value === '' ? '' : normalizeEssayScore(value, answer?.maxPoints);
     setEssayScores((prev) => ({
       ...prev,
       [subId]: { ...prev[subId], [qIndex]: normalized },
@@ -64,7 +68,7 @@ export default function Marking() {
       if (answer.type !== 'essay') return answer;
       return {
         ...answer,
-        score: normalizeEssayScore(getEssayScore(submission.id, index)),
+        score: normalizeEssayScore(getEssayScore(submission.id, index), answer.maxPoints),
       };
     });
   }
@@ -75,13 +79,16 @@ export default function Marking() {
 
     try {
       const updatedAnswers = buildUpdatedAnswers(submission);
-      const totals = getSubmissionTotals(updatedAnswers, submission.totalQuestions);
+      const totals = getSubmissionTotals(updatedAnswers);
 
       await updateDoc(doc(db, 'submissions', submission.id), {
         answers: updatedAnswers,
-        totalCorrect: totals.earned,
-        totalScore: totals.earned,
-        percentage: totals.percentage,
+        mcqScore: totals.mcqEarned,
+        mcqTotal: totals.mcqTotal,
+        mcqPercentage: totals.mcqPercentage,
+        essayScore: totals.essayEarned,
+        essayTotal: totals.essayTotal,
+        essayPercentage: totals.essayPercentage,
         isReleased: true,
         releasedAt: serverTimestamp(),
       });
@@ -92,9 +99,12 @@ export default function Marking() {
             ? {
                 ...item,
                 answers: updatedAnswers,
-                totalCorrect: totals.earned,
-                totalScore: totals.earned,
-                percentage: totals.percentage,
+                mcqScore: totals.mcqEarned,
+                mcqTotal: totals.mcqTotal,
+                mcqPercentage: totals.mcqPercentage,
+                essayScore: totals.essayEarned,
+                essayTotal: totals.essayTotal,
+                essayPercentage: totals.essayPercentage,
                 isReleased: true,
               }
             : item
@@ -115,13 +125,16 @@ export default function Marking() {
     setSaving(submission.id);
     try {
       const updatedAnswers = buildUpdatedAnswers(submission);
-      const totals = getSubmissionTotals(updatedAnswers, submission.totalQuestions);
+      const totals = getSubmissionTotals(updatedAnswers);
 
       await updateDoc(doc(db, 'submissions', submission.id), {
         answers: updatedAnswers,
-        totalCorrect: totals.earned,
-        totalScore: totals.earned,
-        percentage: totals.percentage,
+        mcqScore: totals.mcqEarned,
+        mcqTotal: totals.mcqTotal,
+        mcqPercentage: totals.mcqPercentage,
+        essayScore: totals.essayEarned,
+        essayTotal: totals.essayTotal,
+        essayPercentage: totals.essayPercentage,
       });
 
       setSubmissions((prev) =>
@@ -130,9 +143,12 @@ export default function Marking() {
             ? {
                 ...item,
                 answers: updatedAnswers,
-                totalCorrect: totals.earned,
-                totalScore: totals.earned,
-                percentage: totals.percentage,
+                mcqScore: totals.mcqEarned,
+                mcqTotal: totals.mcqTotal,
+                mcqPercentage: totals.mcqPercentage,
+                essayScore: totals.essayEarned,
+                essayTotal: totals.essayTotal,
+                essayPercentage: totals.essayPercentage,
               }
             : item
         )
@@ -201,9 +217,11 @@ export default function Marking() {
             {list.map((submission, index) => {
               const isOpen = expanded === submission.id;
               const isSaving = saving === submission.id;
-              const totals = getSubmissionTotals(submission.answers, submission.totalQuestions);
-              const earned = submission.totalCorrect ?? totals.earned;
-              const percentage = submission.percentage ?? totals.percentage;
+              const totals = getSubmissionTotals(submission.answers);
+              const mcqEarned = submission.mcqScore ?? totals.mcqEarned;
+              const mcqTotal = submission.mcqTotal ?? totals.mcqTotal;
+              const essayEarned = submission.essayScore ?? totals.essayEarned;
+              const essayTotal = submission.essayTotal ?? totals.essayTotal;
               const date = submission.submittedAt?.toDate
                 ? submission.submittedAt.toDate().toLocaleDateString('en-GB', {
                     day: 'numeric',
@@ -213,9 +231,6 @@ export default function Marking() {
                     minute: '2-digit',
                   })
                 : '';
-              const essayCount = submission.answers?.filter((answer) => answer.type === 'essay').length || 0;
-              const mcqCount = submission.answers?.filter((answer) => answer.type === 'mcq').length || 0;
-              const mcqCorrect = submission.answers?.filter((answer) => answer.type === 'mcq' && answer.isCorrect).length || 0;
 
               return (
                 <div className="submission-card" key={submission.id} style={{ animationDelay: `${index * 60}ms` }}>
@@ -236,9 +251,8 @@ export default function Marking() {
                           {submission.timeLimitMinutes} min
                         </span>
                       ) : null}
-                      {mcqCount > 0 && <span className="badge badge-primary">MCQ: {mcqCorrect}/{mcqCount}</span>}
-                      {essayCount > 0 && <span className="badge badge-accent">Essay: {essayCount}</span>}
-                      <span className="badge badge-success">{earned}/{submission.totalQuestions} • {percentage}%</span>
+                      {mcqTotal > 0 && <span className="badge badge-primary">MCQ: {mcqEarned}/{mcqTotal}</span>}
+                      {essayTotal > 0 && <span className="badge badge-accent">Essay: {essayEarned}/{essayTotal}</span>}
                     </div>
                     <span style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)', marginLeft: 'var(--space-2)' }}>
                       {isOpen ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
@@ -304,20 +318,20 @@ export default function Marking() {
                           {answer.type === 'essay' && !submission.isReleased && (
                             <div className="submission-score-input">
                               <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-600)' }}>
-                                Score (0 or 1):
+                                Score (0 - {answer.maxPoints ?? 1}):
                               </label>
                               <input
                                 className="score-field"
                                 type="number"
                                 min="0"
-                                max="1"
-                                step="1"
+                                max={answer.maxPoints ?? 1}
+                                step="0.01"
                                 placeholder="0"
                                 value={getEssayScore(submission.id, questionIndex)}
                                 onChange={(e) => setEssayScoreLocal(submission.id, questionIndex, e.target.value)}
                               />
                               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
-                                out of 1
+                                out of {answer.maxPoints ?? 1}
                               </span>
                             </div>
                           )}
@@ -331,7 +345,7 @@ export default function Marking() {
                                 color: 'var(--primary)',
                               }}
                             >
-                              Essay score: {normalizeEssayScore(answer.score)}/1
+                              Essay score: {normalizeEssayScore(answer.score, answer.maxPoints)}/{answer.maxPoints ?? 1}
                             </div>
                           )}
                         </div>
@@ -339,7 +353,8 @@ export default function Marking() {
 
                       <div className="submission-footer">
                         <div className="total-score">
-                          Score: {earned}/{submission.totalQuestions} ({percentage}%)
+                          {mcqTotal > 0 && <span>MCQ: {mcqEarned}/{mcqTotal} ({Math.round((mcqEarned / mcqTotal) * 100)}%)</span>}
+                          {essayTotal > 0 && <span>Essay: {essayEarned}/{essayTotal} ({Math.round((essayEarned / essayTotal) * 100)}%)</span>}
                         </div>
 
                         {!submission.isReleased && (

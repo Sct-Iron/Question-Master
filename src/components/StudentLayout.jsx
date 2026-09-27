@@ -8,8 +8,7 @@ import { LogoutIcon, MarkingIcon, QuestionMasterMark, ResultsIcon } from './Icon
 function StudentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { userName } = useAuth();
   const [quizInProgress, setQuizInProgress] = useState(false);
 
   useEffect(() => {
@@ -22,10 +21,6 @@ function StudentLayout() {
     await signOut(auth);
     navigate('/auth', { replace: true });
   };
-
-  const initials = user?.email
-    ? user.email.substring(0, 2).toUpperCase()
-    : 'ST';
 
   return (
     <div className="student-page">
@@ -60,35 +55,15 @@ function StudentLayout() {
           </NavLink>
         </div>}
 
-        <div className="student-profile-area">
-          <div
-            className="student-avatar"
-            onClick={() => setMenuOpen((v) => !v)}
-            title={user?.email || 'Student'}
-          >
-            {initials}
-          </div>
-
-          {menuOpen && (
-            <>
-              <div
-                className="student-menu-overlay"
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="student-menu">
-                <div className="student-menu-email">
-                  {user?.email || 'Student'}
-                </div>
-                <div className="student-menu-divider" />
-                <button className="student-menu-item" onClick={handleLogout}>
-                  <span className="student-menu-item-icon"><LogoutIcon size={16} /></span>
-                  Log out
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <button className="student-logout-button" type="button" onClick={handleLogout}>
+          <LogoutIcon size={16} />
+          <span>Log out</span>
+        </button>
       </nav>
+
+      <div className="student-welcome-bar">
+        Welcome, {userName || 'Student'}
+      </div>
 
       <Outlet context={{ quizInProgress, setQuizInProgress }} />
 

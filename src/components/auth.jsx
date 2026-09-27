@@ -342,13 +342,19 @@ const css = `
 
     .auth-panel-tagline { font-size: 24px; }
 
-    .auth-panel-desc { display: none; }
+    .auth-panel-desc {
+      display: block;
+      margin-bottom: 28px;
+    }
 
-    .auth-features { flex-direction: row; flex-wrap: wrap; gap: 14px; }
+    .auth-features {
+      flex-direction: column;
+      gap: 16px;
+    }
 
-    .auth-feature-text p { display: none; }
+    .auth-feature-text p { display: block; }
 
-    .auth-panel-footer { display: none; }
+    .auth-panel-footer { display: block; }
 
     .auth-panel-right { padding: 32px 20px 48px; }
 
@@ -358,7 +364,7 @@ const css = `
   @media (max-width: 400px) {
     .auth-panel-left { padding: 24px 18px; }
     .auth-panel-right { padding: 24px 16px 40px; }
-    .auth-features { display: none; }
+    .auth-features { display: flex; }
   }
 `
 
@@ -487,7 +493,7 @@ export default function Auth() {
 
           <div className="auth-panel-body">
             <h2 className="auth-panel-tagline">
-              Knowledge,<br />
+              Knowledge<br />
               <span>examined.</span>
             </h2>
             <p className="auth-panel-desc">

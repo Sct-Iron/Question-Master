@@ -99,10 +99,14 @@ export default function ViewResults() {
       <div className="results-list">
         {submissions.map((submission, index) => {
           const isOpen = expanded === submission.id;
-          const totals = getSubmissionTotals(submission.answers, submission.totalQuestions);
-          const earned = submission.totalCorrect ?? totals.earned;
-          const totalQuestions = submission.totalQuestions ?? totals.totalQuestions;
-          const percentage = submission.percentage ?? totals.percentage;
+          const totals = getSubmissionTotals(submission.answers);
+          const mcqEarned = submission.mcqScore ?? totals.mcqEarned;
+          const mcqTotal = submission.mcqTotal ?? totals.mcqTotal;
+          const essayEarned = submission.essayScore ?? totals.essayEarned;
+          const essayTotal = submission.essayTotal ?? totals.essayTotal;
+          const mcqPercentage = submission.mcqPercentage ?? totals.mcqPercentage;
+          const essayPercentage = submission.essayPercentage ?? totals.essayPercentage;
+          const percentage = mcqPercentage ?? essayPercentage ?? 0;
           const gradeClass =
             percentage >= 80 ? 'excellent'
               : percentage >= 60 ? 'good'
@@ -161,7 +165,9 @@ export default function ViewResults() {
                     )}
                     <span>
                       <QuizIcon size={13} />
-                      {earned}/{totalQuestions}
+                      {mcqTotal > 0 && `MCQ ${mcqEarned}/${mcqTotal}`}
+                      {mcqTotal > 0 && essayTotal > 0 ? ' • ' : ''}
+                      {essayTotal > 0 && `Essay ${essayEarned}/${essayTotal}`}
                     </span>
                     {submission.timeLimitMinutes ? (
                       <span>
@@ -207,7 +213,7 @@ export default function ViewResults() {
                                 color: 'var(--primary)',
                               }}
                             >
-                              {normalizeEssayScore(answer.score)}/1 Essay
+                              {normalizeEssayScore(answer.score, answer.maxPoints)}/{answer.maxPoints ?? 1} Essay
                             </div>
                           )}
                         </div>
@@ -245,7 +251,7 @@ export default function ViewResults() {
                     }}
                   >
                     <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', fontWeight: 600 }}>
-                      Final score
+                      Scores by section
                     </span>
                     <span
                       style={{
@@ -253,9 +259,13 @@ export default function ViewResults() {
                         fontSize: 'var(--text-xl)',
                         fontWeight: 800,
                         color: gradeColors[gradeClass],
+                        display: 'flex',
+                        gap: 'var(--space-4)',
+                        flexWrap: 'wrap',
                       }}
                     >
-                      {earned}/{totalQuestions} ({percentage}%)
+                      {mcqTotal > 0 && <span>MCQ: {mcqEarned}/{mcqTotal} ({mcqPercentage}%)</span>}
+                      {essayTotal > 0 && <span>Essay: {essayEarned}/{essayTotal} ({essayPercentage}%)</span>}
                     </span>
                   </div>
                 </div>

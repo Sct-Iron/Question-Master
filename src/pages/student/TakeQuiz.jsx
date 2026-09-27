@@ -110,6 +110,7 @@ export default function TakeQuiz() {
     try {
       let mcqScore = 0;
       let mcqTotal = 0;
+      let essayTotal = 0;
 
       const gradedAnswers = activeQuiz.questions.map((question, index) => {
         const studentAnswer = answers[index] ?? '';
@@ -133,9 +134,14 @@ export default function TakeQuiz() {
           questionText: question.text,
           type: 'essay',
           answer: studentAnswer,
+          maxPoints: question.maxPoints ?? 1,
           score: null,
         };
       });
+
+      essayTotal = gradedAnswers
+        .filter((answer) => answer.type === 'essay')
+        .reduce((sum, answer) => sum + Number(answer.maxPoints || 1), 0);
 
       const submission = {
         quizId: activeQuiz.id,
@@ -145,10 +151,9 @@ export default function TakeQuiz() {
         answers: gradedAnswers,
         mcqScore,
         mcqTotal,
+        essayScore: null,
+        essayTotal,
         totalQuestions: activeQuiz.questions.length,
-        totalCorrect: null,
-        percentage: null,
-        totalScore: null,
         isReleased: false,
         timeLimitMinutes: parseTimeLimit(activeQuiz.timeLimitMinutes),
         timeExpired: forceSubmit && remainingSeconds === 0,

@@ -6,7 +6,7 @@ import {
 import { db, auth } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
-import { formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
+import { formatTimeLimit, parsePointValue, parseTimeLimit } from '../../utils/scoring';
 
 function QuestionForm({ initial, onSave, onCancel }) {
   const [qType, setQType] = useState(initial?.type || 'mcq');
@@ -14,6 +14,7 @@ function QuestionForm({ initial, onSave, onCancel }) {
   const [options, setOptions] = useState(initial?.options || { A: '', B: '', C: '', D: '' });
   const [correct, setCorrect] = useState(initial?.correctAnswer || '');
   const [hint, setHint] = useState(initial?.hint || '');
+  const [maxPoints, setMaxPoints] = useState(String(initial?.maxPoints ?? '1'));
   const [err, setErr] = useState('');
 
   function handleTypeSwitch(nextType) {
@@ -47,7 +48,18 @@ function QuestionForm({ initial, onSave, onCancel }) {
 
       onSave({ type: 'mcq', text: text.trim(), options, correctAnswer: correct });
     } else {
-      onSave({ type: 'essay', text: text.trim(), hint: hint.trim() });
+      const parsedMaxPoints = parsePointValue(maxPoints);
+      if (parsedMaxPoints === null) {
+        setErr('Enter the total attainable points for this essay question.');
+        return;
+      }
+
+      onSave({
+        type: 'essay',
+        text: text.trim(),
+        hint: hint.trim(),
+        maxPoints: parsedMaxPoints,
+      });
     }
 
     setErr('');
@@ -105,14 +117,29 @@ function QuestionForm({ initial, onSave, onCancel }) {
           ))}
         </div>
       ) : (
-        <div className="input-group">
-          <label className="input-label">Marking Guide</label>
-          <textarea
-            className="textarea-field"
-            placeholder="Optional notes for grading this written question..."
-            value={hint}
-            onChange={(e) => setHint(e.target.value)}
-          />
+        <div className="builder-essay-settings">
+          <div className="input-group">
+            <label className="input-label">Total Attainable Points</label>
+            <input
+              className="input-field"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="e.g. 10"
+              value={maxPoints}
+              onChange={(e) => setMaxPoints(e.target.value)}
+            />
+            <p className="builder-setting-help">Set the maximum score this essay question is worth.</p>
+          </div>
+          <div className="input-group">
+            <label className="input-label">Marking Guide</label>
+            <textarea
+              className="textarea-field"
+              placeholder="Optional notes for grading this written question..."
+              value={hint}
+              onChange={(e) => setHint(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
@@ -515,7 +542,8 @@ export default function QuizBuilder() {
                               </p>
                             ) : (
                               <p className="builder-question-helper">
-                                {question.hint ? `Marking guide: ${question.hint}` : 'No marking guide added yet.'}
+                                Worth {question.maxPoints ?? 1} point{Number(question.maxPoints ?? 1) === 1 ? '' : 's'}.
+                                {question.hint ? ` Marking guide: ${question.hint}` : ' No marking guide added yet.'}
                               </p>
                             )}
                           </>
