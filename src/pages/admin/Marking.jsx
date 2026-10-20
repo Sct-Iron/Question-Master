@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { collection, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db, functions } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
 import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, MenuIcon, TimerIcon } from '../../components/Icons';
 import { getSubmissionTotals, normalizeEssayScore } from '../../utils/scoring';
 
@@ -66,11 +67,22 @@ export default function Marking() {
   function buildUpdatedAnswers(submission) {
     return submission.answers.map((answer, index) => {
       if (answer.type !== 'essay') return answer;
+      const score = getEssayScore(submission.id, index);
       return {
         ...answer,
-        score: normalizeEssayScore(getEssayScore(submission.id, index), answer.maxPoints),
+        score: score === '' || score === undefined
+          ? null
+          : normalizeEssayScore(score, answer.maxPoints),
       };
     });
+  }
+
+  function buildEssayScores(submission) {
+    return Object.fromEntries(
+      (submission.answers || [])
+        .map((answer, index) => answer.type === 'essay' ? [index, getEssayScore(submission.id, index)] : null)
+        .filter(Boolean)
+    );
   }
 
   async function handleRelease(submission) {
@@ -81,17 +93,11 @@ export default function Marking() {
       const updatedAnswers = buildUpdatedAnswers(submission);
       const totals = getSubmissionTotals(updatedAnswers);
 
-      await updateDoc(doc(db, 'submissions', submission.id), {
-        answers: updatedAnswers,
-        mcqScore: totals.mcqEarned,
-        mcqTotal: totals.mcqTotal,
-        mcqPercentage: totals.mcqPercentage,
-        essayScore: totals.essayEarned,
-        essayTotal: totals.essayTotal,
-        essayPercentage: totals.essayPercentage,
-        isReleased: true,
-        releasedAt: serverTimestamp(),
+      await httpsCallable(functions, 'saveMarks')({
+        submissionId: submission.id,
+        essayScores: buildEssayScores(submission),
       });
+      await httpsCallable(functions, 'releaseResults')({ submissionId: submission.id });
 
       setSubmissions((prev) =>
         prev.map((item) =>
@@ -127,14 +133,9 @@ export default function Marking() {
       const updatedAnswers = buildUpdatedAnswers(submission);
       const totals = getSubmissionTotals(updatedAnswers);
 
-      await updateDoc(doc(db, 'submissions', submission.id), {
-        answers: updatedAnswers,
-        mcqScore: totals.mcqEarned,
-        mcqTotal: totals.mcqTotal,
-        mcqPercentage: totals.mcqPercentage,
-        essayScore: totals.essayEarned,
-        essayTotal: totals.essayTotal,
-        essayPercentage: totals.essayPercentage,
+      await httpsCallable(functions, 'saveMarks')({
+        submissionId: submission.id,
+        essayScores: buildEssayScores(submission),
       });
 
       setSubmissions((prev) =>
@@ -171,7 +172,7 @@ export default function Marking() {
           </button>
           <div>
             <h1>Marking</h1>
-            <p className="admin-topbar-subtitle">Score each submission out of the total number of questions, then release the result.</p>
+            <p className="admin-topbar-subtitle">Award points for each essay question, then release the result.</p>
           </div>
         </div>
       </div>

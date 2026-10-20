@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
-  collection, addDoc, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp
+  doc, setDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
+import { db, auth, functions } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { useAuth } from '../../context/useAuth';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parsePointValue, parseTimeLimit } from '../../utils/scoring';
 
@@ -46,7 +47,7 @@ function QuestionForm({ initial, onSave, onCancel }) {
         return;
       }
 
-      onSave({ type: 'mcq', text: text.trim(), options, correctAnswer: correct });
+      onSave({ id: initial?.id || crypto.randomUUID(), type: 'mcq', text: text.trim(), options, correctAnswer: correct });
     } else {
       const parsedMaxPoints = parsePointValue(maxPoints);
       if (parsedMaxPoints === null) {
@@ -55,6 +56,7 @@ function QuestionForm({ initial, onSave, onCancel }) {
       }
 
       onSave({
+        id: initial?.id || crypto.randomUUID(),
         type: 'essay',
         text: text.trim(),
         hint: hint.trim(),
@@ -161,7 +163,7 @@ export default function QuizBuilder() {
   const navigate = useNavigate();
   const { setSidebarOpen } = useOutletContext();
   const { quizId } = useParams();
-  const { user, userName } = useAuth();
+  const { userName } = useAuth();
   const isEditing = Boolean(quizId);
 
   const [phase, setPhase] = useState('naming');
@@ -219,12 +221,18 @@ export default function QuizBuilder() {
   useEffect(() => {
     if (isEditing) {
       async function load() {
-        const snap = await getDoc(doc(db, 'quizzes', quizId));
-        if (snap.exists()) {
-          const data = snap.data();
-          setTitle(data.title);
-          setQuestions(data.questions || []);
-          setPhase('building');
+        try {
+          const getQuizEditor = httpsCallable(functions, 'getQuizEditor');
+          const result = await getQuizEditor({ quizId });
+          if (result.data?.quiz) {
+            const data = result.data.quiz;
+            setTitle(data.title || '');
+            setTimeLimitMinutes(data.timeLimitMinutes ? String(data.timeLimitMinutes) : '');
+            setQuestions(data.questions || []);
+            setPhase('building');
+          }
+        } catch (e) {
+          setError(e?.message || 'Could not load this quiz.');
         }
       }
       load();
@@ -303,31 +311,24 @@ export default function QuizBuilder() {
     try {
       const payload = {
         title: title.trim(),
-        questionCount: questions.length,
         questions,
         isPublished: true,
         timeLimitMinutes: parsedTimeLimit,
       };
 
-      if (isEditing) {
-        payload.updatedAt = serverTimestamp();
-        await updateDoc(doc(db, 'quizzes', quizId), payload);
-        setSuccess('Quiz updated successfully.');
-      } else {
-        payload.createdAt = serverTimestamp();
-        payload.createdBy = {
-          uid: user?.uid || '',
-          name: userName || '',
-          email: user?.email || ''
-        };
-        await addDoc(collection(db, 'quizzes'), payload);
-
-        // Clear the draft
-        const uid = auth.currentUser?.uid
-        if (uid) await deleteDoc(doc(db, 'drafts', uid))
-
-        setSuccess('Quiz published successfully.');
+      const saveQuiz = httpsCallable(functions, 'saveQuiz');
+      const result = await saveQuiz({
+        ...payload,
+        quizId: isEditing ? quizId : undefined,
+        createdBy: { name: userName || '' },
+      });
+      if (result.data?.quizId) {
+        setSuccess(isEditing ? 'Quiz updated successfully.' : 'Quiz published successfully.');
       }
+
+      // Clear the draft
+      const uid = auth.currentUser?.uid
+      if (uid && !isEditing) await deleteDoc(doc(db, 'drafts', uid))
 
       setTimeout(() => navigate('/admin/quizzes'), 1200);
     } catch (e) {

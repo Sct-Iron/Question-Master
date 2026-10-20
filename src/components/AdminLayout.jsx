@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { DashboardIcon, LogoutIcon, MarkingIcon, PencilIcon, QuestionMasterMark, QuizIcon, ShieldIcon } from './Icons';
 
 function AdminLayout() {

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
+import { collection, getDocs } from 'firebase/firestore';
+import { db, functions } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { useAuth } from '../../context/useAuth';
 import { MenuIcon, ShieldIcon, UserCheckIcon, StudentsIcon } from '../../components/Icons';
 
 export default function AdminApproval() {
@@ -14,11 +15,7 @@ export default function AdminApproval() {
   const [actionLoading, setActionLoading] = useState(null); // uid being acted on
   const [tab, setTab] = useState('pending'); // 'pending' | 'approved'
 
-  useEffect(() => {
-    loadAdmins();
-  }, []);
-
-  async function loadAdmins() {
+  const loadAdmins = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch all users and filter client-side to avoid compound query permission issues
@@ -31,12 +28,17 @@ export default function AdminApproval() {
       console.error('Failed to load admins:', err);
     }
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadAdmins(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadAdmins]);
 
   async function handleApprove(uid) {
     setActionLoading(uid);
     try {
-      await updateDoc(doc(db, 'users', uid), { status: 'approved' });
+      await httpsCallable(functions, 'approveAdmin')({ uid });
       setPendingAdmins(prev => prev.filter(u => u.id !== uid));
       // Refresh approved list
       const approvedUser = pendingAdmins.find(u => u.id === uid);
@@ -53,7 +55,7 @@ export default function AdminApproval() {
     if (!window.confirm('Reject this admin request? They will be downgraded to a student.')) return;
     setActionLoading(uid);
     try {
-      await updateDoc(doc(db, 'users', uid), { status: 'approved', role: 'student' });
+      await httpsCallable(functions, 'rejectAdmin')({ uid });
       setPendingAdmins(prev => prev.filter(u => u.id !== uid));
     } catch (err) {
       console.error('Failed to reject admin:', err);
@@ -65,7 +67,7 @@ export default function AdminApproval() {
     if (!window.confirm(`Remove admin access for "${name}"? They will be downgraded to a student.`)) return;
     setActionLoading(uid);
     try {
-      await updateDoc(doc(db, 'users', uid), { role: 'student' });
+      await httpsCallable(functions, 'rejectAdmin')({ uid });
       setApprovedAdmins(prev => prev.filter(u => u.id !== uid));
     } catch (err) {
       console.error('Failed to remove admin:', err);

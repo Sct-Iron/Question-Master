@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { getIdTokenResult, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { auth, db } from '../firebase'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, functions } from '../firebase'
 import { useNavigate } from 'react-router-dom'
-import { ADMIN_EMAIL } from '../config/admin'
 import { QuestionMasterMark } from './Icons'
 
 const injectFonts = () => {
@@ -396,41 +396,31 @@ export default function Auth() {
       }
       if (mode === 'login') {
         const { user } = await signInWithEmailAndPassword(auth, email, password)
-        const userEmail = user.email?.trim().toLowerCase() || ''
-        const isSuper = userEmail === ADMIN_EMAIL.toLowerCase()
+        try {
+          await httpsCallable(functions, 'bootstrapSuperAdmin')({})
+          await user.getIdToken(true)
+        } catch {
+          // Normal users are expected to receive a permission-denied response here.
+        }
+        const tokenResult = await getIdTokenResult(user, true)
+        const claims = tokenResult.claims || {}
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
+        const data = userDoc.exists() ? userDoc.data() : {}
+        const userStatus = data.status || 'approved'
+        const userRole = claims.role || (data.role === 'admin' && userStatus === 'pending' ? 'admin' : 'student')
 
-        if (isSuper) {
+        if (userRole === 'admin' && userStatus === 'pending') {
+          navigate('/pending-approval', { replace: true })
+        } else if (userRole === 'admin') {
           navigate('/admin/dashboard', { replace: true })
         } else {
-          // Read role + status from Firestore
-          try {
-            const userDoc = await getDoc(doc(db, 'users', user.uid))
-            if (userDoc.exists()) {
-              const data = userDoc.data()
-              const userRole = data.role || 'student'
-              const userStatus = data.status || 'approved'
-
-              if (userRole === 'admin' && userStatus === 'pending') {
-                navigate('/pending-approval', { replace: true })
-              } else if (userRole === 'admin' && userStatus === 'approved') {
-                navigate('/admin/dashboard', { replace: true })
-              } else {
-                navigate('/student/take-quiz', { replace: true })
-              }
-            } else {
-              navigate('/student/take-quiz', { replace: true })
-            }
-          } catch (e) {
-            console.warn('Could not fetch user profile:', e.message)
-            navigate('/student/take-quiz', { replace: true })
-          }
+          navigate('/student/take-quiz', { replace: true })
         }
       } else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password)
         const userEmail = email.trim().toLowerCase()
-        const isSuper = userEmail === ADMIN_EMAIL.toLowerCase()
-        const role = isSuper ? 'admin' : selectedRole
-        const status = (isSuper || selectedRole === 'student') ? 'approved' : 'pending'
+        const role = selectedRole
+        const status = selectedRole === 'student' ? 'approved' : 'pending'
 
         try {
           await setDoc(doc(db, 'users', user.uid), {

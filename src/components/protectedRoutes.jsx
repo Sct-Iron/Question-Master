@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 // requiredRole: 'admin' | 'student' | undefined (any authenticated user)
 const ProtectedRoute = ({ children, requiredRole }) => {

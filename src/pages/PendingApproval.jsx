@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { ShieldIcon, RefreshIcon, LogoutIcon } from '../components/Icons';
 
 const css = `
@@ -157,7 +157,6 @@ export default function PendingApproval() {
   const { status, refreshStatus, role } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
-  const [message, setMessage] = useState('');
 
   const isRejected = String(status || '').trim().toLowerCase() === 'rejected';
   const isApproved = String(status || '').trim().toLowerCase() === 'approved' && String(role || '').trim().toLowerCase() === 'admin';
@@ -170,7 +169,6 @@ export default function PendingApproval() {
 
   async function handleRefresh() {
     setChecking(true);
-    setMessage('');
     await refreshStatus();
 
     // Re-read from context after refresh

@@ -1,13 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
+import { getIdTokenResult, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { ADMIN_EMAIL } from '../config/admin';
+import { AuthContext } from './AuthContextValue';
 
 const normalizeRole = (value) => String(value || 'student').trim().toLowerCase();
 const normalizeStatus = (value) => String(value || 'approved').trim().toLowerCase();
-
-const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -20,12 +18,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userEmail = firebaseUser.email?.trim().toLowerCase() || '';
-        const isSuper = userEmail === ADMIN_EMAIL.toLowerCase();
+        const tokenResult = await getIdTokenResult(firebaseUser);
+        const claims = tokenResult.claims || {};
+        const isSuper = claims.isSuperAdmin === true;
+        const tokenRole = String(claims.role || '').trim().toLowerCase();
         setIsSuperAdmin(isSuper);
 
         // Always treat the super admin as approved admin
-        if (isSuper) {
+        if (isSuper || tokenRole === 'admin') {
           setUser(firebaseUser);
           setRole('admin');
           setStatus('approved');
@@ -39,14 +39,16 @@ export function AuthProvider({ children }) {
           } catch (e) {
             console.warn('Could not fetch super admin profile:', e.message);
           }
-        } else {
+          } else {
           // For all other users, read role + status from Firestore
           try {
             const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
             if (userDoc.exists()) {
               const data = userDoc.data();
-              setRole(normalizeRole(data.role));
-              setStatus(normalizeStatus(data.status));
+              const profileRole = normalizeRole(data.role);
+              const profileStatus = normalizeStatus(data.status);
+              setRole(tokenRole || (profileRole === 'admin' && profileStatus === 'pending' ? 'admin' : 'student'));
+              setStatus(profileStatus);
               setUserName(data.name || '');
             } else {
               // No Firestore doc — fallback to student
@@ -80,11 +82,16 @@ export function AuthProvider({ children }) {
   async function refreshStatus() {
     if (!auth.currentUser) return;
     try {
+      const tokenResult = await getIdTokenResult(auth.currentUser, true);
+      const tokenRole = String(tokenResult.claims?.role || '').trim().toLowerCase();
+      setIsSuperAdmin(tokenResult.claims?.isSuperAdmin === true);
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
-        setRole(normalizeRole(data.role));
-        setStatus(normalizeStatus(data.status));
+        const profileRole = normalizeRole(data.role);
+        const profileStatus = normalizeStatus(data.status);
+        setRole(tokenRole || (profileRole === 'admin' && profileStatus === 'pending' ? 'admin' : 'student'));
+        setStatus(profileStatus);
         setUserName(data.name || '');
       }
     } catch (e) {
@@ -97,8 +104,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

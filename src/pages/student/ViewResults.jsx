@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, QuizIcon, ResultsIcon, TimerIcon } from '../../components/Icons';
 import { getSubmissionTotals, normalizeEssayScore } from '../../utils/scoring';
 

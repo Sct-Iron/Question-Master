@@ -1,8 +1,9 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useOutletContext } from 'react-router-dom';
-import { db } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
+import { db, functions } from '../../firebase';
+import { useAuth } from '../../context/useAuth';
 import { AlertIcon, ArrowLeftIcon, CheckCircleIcon, QuizIcon, SearchIcon, TimerIcon } from '../../components/Icons';
 import { formatRemainingTime, formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
@@ -15,6 +16,7 @@ export default function TakeQuiz() {
   const [searchTerm, setSearchTerm] = useState('');
   const [takenQuizIds, setTakenQuizIds] = useState(new Set());
   const [activeQuiz, setActiveQuiz] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
   const [answers, setAnswers] = useState({});
   const [remainingSeconds, setRemainingSeconds] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -26,13 +28,12 @@ export default function TakeQuiz() {
       setLoading(true);
       try {
         const [quizSnap, subSnap] = await Promise.all([
-          getDocs(query(collection(db, 'quizzes'), where('isPublished', '==', true))),
+          httpsCallable(functions, 'listPublishedQuizzes')({}),
           user?.uid
             ? getDocs(query(collection(db, 'submissions'), where('studentId', '==', user.uid)))
             : Promise.resolve(null),
         ]);
-        const published = quizSnap.docs
-          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        const published = quizSnap.data.quizzes
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setQuizzes(published);
 
@@ -68,11 +69,18 @@ export default function TakeQuiz() {
     [quizzes, searchTerm]
   );
 
-  function startQuiz(quiz) {
+  async function startQuiz(quiz) {
     const minutes = parseTimeLimit(quiz.timeLimitMinutes);
-    setActiveQuiz(quiz);
-    setAnswers({});
     setSubmitError('');
+    try {
+      const result = await httpsCallable(functions, 'startQuiz')({ quizId: quiz.id });
+      setActiveQuiz(result.data.quiz);
+      setAttemptId(result.data.attemptId);
+    } catch (error) {
+      setSubmitError(error?.message || 'Could not start this quiz.');
+      return;
+    }
+    setAnswers({});
     setSubmittedByTimer(false);
     setRemainingSeconds(minutes ? minutes * 60 : null);
     setView('quiz');
@@ -108,62 +116,12 @@ export default function TakeQuiz() {
     setSubmitting(true);
 
     try {
-      let mcqScore = 0;
-      let mcqTotal = 0;
-      let essayTotal = 0;
-
-      const gradedAnswers = activeQuiz.questions.map((question, index) => {
-        const studentAnswer = answers[index] ?? '';
-        if (question.type === 'mcq') {
-          mcqTotal += 1;
-          const isCorrect = studentAnswer === question.correctAnswer;
-          if (isCorrect) mcqScore += 1;
-          return {
-            questionIndex: index,
-            questionText: question.text,
-            type: 'mcq',
-            answer: studentAnswer,
-            answerText: question.options?.[studentAnswer] || '',
-            correctAnswer: question.correctAnswer,
-            isCorrect,
-          };
-        }
-
-        return {
-          questionIndex: index,
-          questionText: question.text,
-          type: 'essay',
-          answer: studentAnswer,
-          maxPoints: question.maxPoints ?? 1,
-          score: null,
-        };
-      });
-
-      essayTotal = gradedAnswers
-        .filter((answer) => answer.type === 'essay')
-        .reduce((sum, answer) => sum + Number(answer.maxPoints || 1), 0);
-
-      const submission = {
-        quizId: activeQuiz.id,
-        quizTitle: activeQuiz.title,
-        studentId: user?.uid || 'anonymous',
-        studentEmail: user?.email || 'anonymous',
-        answers: gradedAnswers,
-        mcqScore,
-        mcqTotal,
-        essayScore: null,
-        essayTotal,
-        totalQuestions: activeQuiz.questions.length,
-        isReleased: false,
-        timeLimitMinutes: parseTimeLimit(activeQuiz.timeLimitMinutes),
-        timeExpired: forceSubmit && remainingSeconds === 0,
-        submittedAt: serverTimestamp(),
-        releasedAt: null,
-      };
-
-      await addDoc(collection(db, 'submissions'), submission);
+      const submittedAnswers = Object.fromEntries(
+        activeQuiz.questions.map((question, index) => [question.id || `q-${index + 1}`, answers[index] ?? ''])
+      );
+      const result = await httpsCallable(functions, 'submitQuiz')({ attemptId, answers: submittedAnswers });
       setTakenQuizIds((prev) => new Set([...prev, activeQuiz.id]));
-      setSubmittedByTimer(forceSubmit && remainingSeconds === 0);
+      setSubmittedByTimer(result.data?.timeExpired === true || (forceSubmit && remainingSeconds === 0));
       setView('submitted');
       setQuizInProgress(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
