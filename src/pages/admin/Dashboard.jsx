@@ -189,7 +189,7 @@ New Quiz
               style={{ cursor: 'pointer' }}
               onClick={() => navigate(`/admin/quiz-builder/${quiz.id}`)}
             >
-              <div className="quiz-item-color" />
+             
               <div className="quiz-item-info">
                 <div className="quiz-item-title">{quiz.title || 'Untitled Quiz'}</div>
                 <div className="quiz-item-meta">
