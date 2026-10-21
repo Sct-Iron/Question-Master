@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db, functions } from '../../firebase';
-import { httpsCallable } from 'firebase/functions';
+import { db } from '../../firebase';
+import { callBackend } from '../../api/backend';
 import { useAuth } from '../../context/useAuth';
 import { MenuIcon, PencilIcon, QuizIcon } from '../../components/Icons';
 
@@ -35,7 +35,7 @@ export default function Quizzes() {
 
   async function handleDelete(id) {
     try {
-      await httpsCallable(functions, 'deleteQuiz')({ quizId: id });
+      await callBackend('deleteQuiz', { quizId: id });
       setQuizzes((prev) => prev.filter((quiz) => quiz.id !== id));
       setDeleteTarget(null);
     } catch (e) {

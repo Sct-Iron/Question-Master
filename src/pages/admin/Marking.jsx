@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, functions } from '../../firebase';
-import { httpsCallable } from 'firebase/functions';
+import { db } from '../../firebase';
+import { callBackend } from '../../api/backend';
 import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, MenuIcon, TimerIcon } from '../../components/Icons';
 import { getSubmissionTotals, normalizeEssayScore } from '../../utils/scoring';
 
@@ -93,11 +93,11 @@ export default function Marking() {
       const updatedAnswers = buildUpdatedAnswers(submission);
       const totals = getSubmissionTotals(updatedAnswers);
 
-      await httpsCallable(functions, 'saveMarks')({
+      await callBackend('saveMarks', {
         submissionId: submission.id,
         essayScores: buildEssayScores(submission),
       });
-      await httpsCallable(functions, 'releaseResults')({ submissionId: submission.id });
+      await callBackend('releaseResults', { submissionId: submission.id });
 
       setSubmissions((prev) =>
         prev.map((item) =>
@@ -133,7 +133,7 @@ export default function Marking() {
       const updatedAnswers = buildUpdatedAnswers(submission);
       const totals = getSubmissionTotals(updatedAnswers);
 
-      await httpsCallable(functions, 'saveMarks')({
+      await callBackend('saveMarks', {
         submissionId: submission.id,
         essayScores: buildEssayScores(submission),
       });

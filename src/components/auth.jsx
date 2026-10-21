@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { getIdTokenResult, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
-import { auth, db, functions } from '../firebase'
+import { auth, db } from '../firebase'
 import { useNavigate } from 'react-router-dom'
 import { QuestionMasterMark } from './Icons'
 
@@ -396,12 +395,7 @@ export default function Auth() {
       }
       if (mode === 'login') {
         const { user } = await signInWithEmailAndPassword(auth, email, password)
-        try {
-          await httpsCallable(functions, 'bootstrapSuperAdmin')({})
-          await user.getIdToken(true)
-        } catch {
-          // Normal users are expected to receive a permission-denied response here.
-        }
+        await user.getIdToken(true)
         const tokenResult = await getIdTokenResult(user, true)
         const claims = tokenResult.claims || {}
         const userDoc = await getDoc(doc(db, 'users', user.uid))

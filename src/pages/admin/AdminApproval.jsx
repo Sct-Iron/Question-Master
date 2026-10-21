@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, functions } from '../../firebase';
-import { httpsCallable } from 'firebase/functions';
+import { db } from '../../firebase';
+import { callBackend } from '../../api/backend';
 import { useAuth } from '../../context/useAuth';
 import { MenuIcon, ShieldIcon, UserCheckIcon, StudentsIcon } from '../../components/Icons';
 
@@ -38,7 +38,7 @@ export default function AdminApproval() {
   async function handleApprove(uid) {
     setActionLoading(uid);
     try {
-      await httpsCallable(functions, 'approveAdmin')({ uid });
+      await callBackend('approveAdmin', { uid });
       setPendingAdmins(prev => prev.filter(u => u.id !== uid));
       // Refresh approved list
       const approvedUser = pendingAdmins.find(u => u.id === uid);
@@ -55,7 +55,7 @@ export default function AdminApproval() {
     if (!window.confirm('Reject this admin request? They will be downgraded to a student.')) return;
     setActionLoading(uid);
     try {
-      await httpsCallable(functions, 'rejectAdmin')({ uid });
+      await callBackend('rejectAdmin', { uid });
       setPendingAdmins(prev => prev.filter(u => u.id !== uid));
     } catch (err) {
       console.error('Failed to reject admin:', err);
@@ -67,7 +67,7 @@ export default function AdminApproval() {
     if (!window.confirm(`Remove admin access for "${name}"? They will be downgraded to a student.`)) return;
     setActionLoading(uid);
     try {
-      await httpsCallable(functions, 'rejectAdmin')({ uid });
+      await callBackend('rejectAdmin', { uid });
       setApprovedAdmins(prev => prev.filter(u => u.id !== uid));
     } catch (err) {
       console.error('Failed to remove admin:', err);

@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { useOutletContext } from 'react-router-dom';
-import { db, functions } from '../../firebase';
+import { db } from '../../firebase';
+import { callBackend } from '../../api/backend';
 import { useAuth } from '../../context/useAuth';
 import { AlertIcon, ArrowLeftIcon, CheckCircleIcon, QuizIcon, SearchIcon, TimerIcon } from '../../components/Icons';
 import { formatRemainingTime, formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
@@ -28,7 +28,7 @@ export default function TakeQuiz() {
       setLoading(true);
       try {
         const [quizSnap, subSnap] = await Promise.all([
-          httpsCallable(functions, 'listPublishedQuizzes')({}),
+          callBackend('listPublishedQuizzes'),
           user?.uid
             ? getDocs(query(collection(db, 'submissions'), where('studentId', '==', user.uid)))
             : Promise.resolve(null),
@@ -73,7 +73,7 @@ export default function TakeQuiz() {
     const minutes = parseTimeLimit(quiz.timeLimitMinutes);
     setSubmitError('');
     try {
-      const result = await httpsCallable(functions, 'startQuiz')({ quizId: quiz.id });
+      const result = await callBackend('startQuiz', { quizId: quiz.id });
       setActiveQuiz(result.data.quiz);
       setAttemptId(result.data.attemptId);
     } catch (error) {
@@ -119,7 +119,7 @@ export default function TakeQuiz() {
       const submittedAnswers = Object.fromEntries(
         activeQuiz.questions.map((question, index) => [question.id || `q-${index + 1}`, answers[index] ?? ''])
       );
-      const result = await httpsCallable(functions, 'submitQuiz')({ attemptId, answers: submittedAnswers });
+      const result = await callBackend('submitQuiz', { attemptId, answers: submittedAnswers });
       setTakenQuizIds((prev) => new Set([...prev, activeQuiz.id]));
       setSubmittedByTimer(result.data?.timeExpired === true || (forceSubmit && remainingSeconds === 0));
       setView('submitted');

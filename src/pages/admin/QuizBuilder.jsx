@@ -3,8 +3,8 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   doc, setDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
-import { db, auth, functions } from '../../firebase';
-import { httpsCallable } from 'firebase/functions';
+import { db, auth } from '../../firebase';
+import { callBackend } from '../../api/backend';
 import { useAuth } from '../../context/useAuth';
 import { ArrowRightIcon, MenuIcon, PencilIcon, PlusIcon, QuizIcon, TimerIcon } from '../../components/Icons';
 import { formatTimeLimit, parsePointValue, parseTimeLimit } from '../../utils/scoring';
@@ -222,8 +222,7 @@ export default function QuizBuilder() {
     if (isEditing) {
       async function load() {
         try {
-          const getQuizEditor = httpsCallable(functions, 'getQuizEditor');
-          const result = await getQuizEditor({ quizId });
+          const result = await callBackend('getQuizEditor', { quizId });
           if (result.data?.quiz) {
             const data = result.data.quiz;
             setTitle(data.title || '');
@@ -316,8 +315,7 @@ export default function QuizBuilder() {
         timeLimitMinutes: parsedTimeLimit,
       };
 
-      const saveQuiz = httpsCallable(functions, 'saveQuiz');
-      const result = await saveQuiz({
+      const result = await callBackend('saveQuiz', {
         ...payload,
         quizId: isEditing ? quizId : undefined,
         createdBy: { name: userName || '' },

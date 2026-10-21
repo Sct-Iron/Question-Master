@@ -1,0 +1,10 @@
+name = "question-master-api"
+main = "src/index.js"
+compatibility_date = "2026-10-20"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+FIREBASE_PROJECT_ID = "questionmaster-c4fab"
+APP_ORIGIN = "https://question-master01.vercel.app"
