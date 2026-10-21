@@ -6,7 +6,7 @@ import { MenuIcon, ShieldIcon, UserCheckIcon, StudentsIcon } from '../../compone
 
 export default function AdminApproval() {
   const { setSidebarOpen } = useOutletContext();
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const [pendingAdmins, setPendingAdmins] = useState([]);
   const [approvedAdmins, setApprovedAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -210,7 +210,8 @@ export default function AdminApproval() {
             ) : (
               <div className="admin-list">
                 {approvedAdmins.map(admin => {
-                  const isSelf = admin.email?.toLowerCase() === 'favoure1231@gmail.com';
+                  const isSelf = admin.id === user?.uid;
+                  const isCurrentSuperAdmin = isSelf && isSuperAdmin;
                   return (
                     <article key={admin.id} className="page-panel admin-list-card">
                       <div className="admin-list-card-main">
@@ -221,7 +222,7 @@ export default function AdminApproval() {
                           <div className="admin-list-card-copy">
                             <div className="admin-list-card-row">
                               <h3>{admin.name || 'Unnamed User'}</h3>
-                              {isSelf ? (
+                              {isCurrentSuperAdmin ? (
                                 <span className="badge badge-primary">Super Admin</span>
                               ) : (
                                 <span className="badge badge-success">Active</span>
