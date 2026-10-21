@@ -13,6 +13,8 @@ export default function TakeQuiz() {
   const [view, setView] = useState('browse');
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [quizLoadError, setQuizLoadError] = useState('');
+  const [attemptLoadError, setAttemptLoadError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [takenQuizIds, setTakenQuizIds] = useState(new Set());
   const [activeQuiz, setActiveQuiz] = useState(null);
@@ -26,23 +28,33 @@ export default function TakeQuiz() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      try {
-        const [quizSnap, subSnap] = await Promise.all([
-          callBackend('listPublishedQuizzes'),
-          user?.uid
-            ? getDocs(query(collection(db, 'submissions'), where('studentId', '==', user.uid)))
-            : Promise.resolve(null),
-        ]);
-        const published = quizSnap.data.quizzes
+      setQuizLoadError('');
+      setAttemptLoadError('');
+
+      const [quizResult, attemptResult] = await Promise.allSettled([
+        callBackend('listPublishedQuizzes'),
+        user?.uid
+          ? getDocs(query(collection(db, 'attempts'), where('studentId', '==', user.uid)))
+          : Promise.resolve(null),
+      ]);
+
+      if (quizResult.status === 'fulfilled') {
+        const published = quizResult.value.data.quizzes
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setQuizzes(published);
+      } else {
+        console.error('Failed to load published quizzes:', quizResult.reason);
+        setQuizLoadError('Failed to load quizzes. Please refresh the page.');
+      }
 
-        if (subSnap) {
-          const taken = new Set(subSnap.docs.map((docSnap) => docSnap.data().quizId));
+      if (attemptResult.status === 'fulfilled') {
+        if (attemptResult.value) {
+          const taken = new Set(attemptResult.value.docs.map((docSnap) => docSnap.data().quizId));
           setTakenQuizIds(taken);
         }
-      } catch (err) {
-        console.error('Error loading data:', err);
+      } else {
+        console.error('Failed to load quiz attempts:', attemptResult.reason);
+        setAttemptLoadError('Could not load your completion status. The server will still prevent duplicate submissions.');
       }
       setLoading(false);
     }
@@ -327,6 +339,20 @@ export default function TakeQuiz() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
+      {quizLoadError && (
+        <div className="auth-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          <AlertIcon size={16} />
+          {quizLoadError}
+        </div>
+      )}
+
+      {attemptLoadError && (
+        <div className="auth-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          <AlertIcon size={16} />
+          {attemptLoadError}
+        </div>
+      )}
 
       {loading && (
         <div className="empty-state">

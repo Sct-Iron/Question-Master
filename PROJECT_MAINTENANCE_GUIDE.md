@@ -77,6 +77,7 @@ firebase deploy --only firestore:rules
 ```
 
 They allow users to read their own profile, allow super admins to manage profiles, allow only valid initial profiles, and block direct client writes to quizzes, answer keys, attempts, and submissions. Students can read submissions only after release.
+Students can read their own attempts; the student quiz list uses those attempts to show completed quizzes.
 
 If a rule denies access, check the ID-token claims first. Updating a profile does not update claims.
 
@@ -175,4 +176,3 @@ Do not replace server authorization with client-side email checks or request-bod
 - A scheduled expiry run previously logged a Firestore REST query `400`; inspect that query before relying on automatic expiry.
 - Claim changes require an ID-token refresh.
 - Remove and rotate exposed service-account keys.
-

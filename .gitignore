@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 .wrangler-config/
+V2_IMPLEMENTATION_PLAN.md
 # Firebase Admin SDK credentials
 *-firebase-adminsdk-*.json
 
