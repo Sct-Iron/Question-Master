@@ -1961,3 +1961,16 @@
   font-weight: 800;
   letter-spacing: 0.04em;
 }
+
+/* Keep the interface flat and let borders, spacing, and color provide hierarchy. */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+}
+
+/* Preserve a clear keyboard focus indicator after removing focus shadows. */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid rgba(11, 124, 114, 0.35);
+  outline-offset: 2px;
+}
