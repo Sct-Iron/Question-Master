@@ -10,11 +10,13 @@ const db = getFirestore();
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const allApproved = args.includes('--all-approved');
+const promoteSuperAdmin = args.includes('--super-admin');
 const uidIndex = args.indexOf('--uid');
 const targetUid = uidIndex >= 0 ? args[uidIndex + 1] : '';
 
-if ((!targetUid && !allApproved) || (targetUid && allApproved)) {
+if ((!targetUid && !allApproved) || (targetUid && allApproved) || (promoteSuperAdmin && (!targetUid || allApproved))) {
   console.error('Usage: node scripts/migrate-admin-claims.js --uid <uid> [--apply]');
+  console.error('   or: node scripts/migrate-admin-claims.js --uid <uid> --super-admin [--apply]');
   console.error('   or: node scripts/migrate-admin-claims.js --all-approved [--apply]');
   process.exit(1);
 }
@@ -54,10 +56,10 @@ for (const candidate of candidates) {
   const nextClaims = {
     ...existingClaims,
     role: 'admin',
-    isSuperAdmin: existingClaims.isSuperAdmin === true,
+    isSuperAdmin: promoteSuperAdmin ? true : existingClaims.isSuperAdmin === true,
   };
 
-  console.log(candidate.uid + ': ' + (user.email || '(no email)') + ' -> role=admin');
+  console.log(candidate.uid + ': ' + (user.email || '(no email)') + ' -> role=admin, isSuperAdmin=' + nextClaims.isSuperAdmin);
   if (apply) {
     await auth.setCustomUserClaims(candidate.uid, nextClaims);
     console.log('  custom claims updated; the user must refresh their ID token.');

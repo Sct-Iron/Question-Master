@@ -113,6 +113,10 @@ The production backend now uses the `question-master-api` Cloudflare Worker for 
 
    `node functions/scripts/migrate-admin-claims.js --uid <MR_OKOLO_UID> --apply`
 
+   To explicitly promote that verified, approved account to super administrator, use the UID-targeted command below. This is intentionally not available for bulk migration:
+
+   `node functions/scripts/migrate-admin-claims.js --uid <MR_OKOLO_UID> --super-admin --apply`
+
    The migration uses the Admin SDK, preserves unrelated claims, and changes only an already-approved admin profile. The user must sign out and sign in again, or force an ID-token refresh, before the new claim reaches the browser.
 
 Do not restore the old client-side email check. Authorization is enforced by Firebase custom claims, Cloudflare Worker checks, and Firestore Rules. The Worker source and configuration are in `cloudflare-worker/`.

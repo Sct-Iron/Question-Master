@@ -18,7 +18,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const tokenResult = await getIdTokenResult(firebaseUser);
+        // Custom claims are issued in the ID token. Force a refresh here so a
+        // newly promoted super admin is recognized without a stale session.
+        const tokenResult = await getIdTokenResult(firebaseUser, true);
         const claims = tokenResult.claims || {};
         const isSuper = claims.isSuperAdmin === true;
         const tokenRole = String(claims.role || '').trim().toLowerCase();

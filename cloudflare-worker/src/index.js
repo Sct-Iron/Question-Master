@@ -16,7 +16,11 @@ function json(data, status = 200, headers = {}) {
 
 function corsHeaders(request, env) {
   const origin = request.headers.get('Origin');
-  const allowedOrigin = env.APP_ORIGIN && origin === env.APP_ORIGIN ? origin : env.APP_ORIGIN;
+  const configuredOrigins = String(env.APP_ORIGINS || env.APP_ORIGIN || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowedOrigin = origin && configuredOrigins.includes(origin) ? origin : '';
   return {
     ...(allowedOrigin ? { 'access-control-allow-origin': allowedOrigin } : {}),
     'access-control-allow-headers': 'Authorization, Content-Type',

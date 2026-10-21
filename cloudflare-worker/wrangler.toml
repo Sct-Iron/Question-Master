@@ -8,3 +8,4 @@ crons = ["*/5 * * * *"]
 [vars]
 FIREBASE_PROJECT_ID = "questionmaster-c4fab"
 APP_ORIGIN = "https://question-master01.vercel.app"
+APP_ORIGINS = "https://question-master01.vercel.app,http://localhost:5173,http://127.0.0.1:5173"
