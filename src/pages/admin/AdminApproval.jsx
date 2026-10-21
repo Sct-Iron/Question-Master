@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase';
 import { callBackend } from '../../api/backend';
 import { useAuth } from '../../context/useAuth';
 import { MenuIcon, ShieldIcon, UserCheckIcon, StudentsIcon } from '../../components/Icons';
@@ -18,12 +16,10 @@ export default function AdminApproval() {
   const loadAdmins = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all users and filter client-side to avoid compound query permission issues
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      setPendingAdmins(allUsers.filter(u => u.role === 'admin' && u.status === 'pending'));
-      setApprovedAdmins(allUsers.filter(u => u.role === 'admin' && u.status === 'approved'));
+      // Use the trusted backend as the single source of truth for admin state.
+      const { data } = await callBackend('listAdmins');
+      setPendingAdmins(data.pendingAdmins || []);
+      setApprovedAdmins(data.approvedAdmins || []);
     } catch (err) {
       console.error('Failed to load admins:', err);
     }
@@ -39,12 +35,7 @@ export default function AdminApproval() {
     setActionLoading(uid);
     try {
       await callBackend('approveAdmin', { uid });
-      setPendingAdmins(prev => prev.filter(u => u.id !== uid));
-      // Refresh approved list
-      const approvedUser = pendingAdmins.find(u => u.id === uid);
-      if (approvedUser) {
-        setApprovedAdmins(prev => [...prev, { ...approvedUser, status: 'approved' }]);
-      }
+      await loadAdmins();
     } catch (err) {
       console.error('Failed to approve admin:', err);
     }
@@ -56,7 +47,7 @@ export default function AdminApproval() {
     setActionLoading(uid);
     try {
       await callBackend('rejectAdmin', { uid });
-      setPendingAdmins(prev => prev.filter(u => u.id !== uid));
+      await loadAdmins();
     } catch (err) {
       console.error('Failed to reject admin:', err);
     }
@@ -68,7 +59,7 @@ export default function AdminApproval() {
     setActionLoading(uid);
     try {
       await callBackend('rejectAdmin', { uid });
-      setApprovedAdmins(prev => prev.filter(u => u.id !== uid));
+      await loadAdmins();
     } catch (err) {
       console.error('Failed to remove admin:', err);
     }
