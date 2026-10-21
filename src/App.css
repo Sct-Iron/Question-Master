@@ -180,8 +180,7 @@
 
 .input-field:focus,
 .textarea-field:focus,
-.score-field:focus,
-.search-bar:focus-within {
+.score-field:focus {
   border-color: rgba(11, 124, 114, 0.45);
   box-shadow:
     0 0 0 4px rgba(11, 124, 114, 0.08),
@@ -1352,7 +1351,7 @@
 .quiz-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  background: var(--primary);
 }
 
 .student-question-card,
@@ -1362,7 +1361,7 @@
   border-radius: 1.55rem;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.12);
-  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 20px 38px rgba(255, 27, 27, 0.774);
 }
 
 .student-question-card {
@@ -1466,9 +1465,15 @@
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.05);
 }
 
+.search-bar:focus-within {
+  border-color: rgba(11, 124, 114, 0.3);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
 .search-bar input {
   flex: 1;
   border: none;
+  outline: none;
   background: transparent;
   color: var(--gray-900);
   font-size: var(--text-sm);
@@ -1493,9 +1498,14 @@
   box-shadow: 0 24px 42px rgba(15, 23, 42, 0.1);
 }
 
-.student-quiz-card-accent {
-  height: 6px;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+.student-quiz-card {
+  border-color: var(--gray-300);
+  box-shadow: 0 5px 14px rgba(16, 22, 28, 0.18), 0 1px 3px rgba(16, 22, 28, 0.12);
+}
+
+.student-quiz-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 10px 22px rgba(16, 22, 28, 0.2), 0 2px 5px rgba(16, 22, 28, 0.12);
 }
 
 .student-quiz-card-body {
