@@ -36,7 +36,9 @@ function routeKey(request) {
 }
 
 function apiRoute(request) {
-  return new URL(request.url).pathname.replace(/^\/api\/?/, '');
+  return new URL(request.url).pathname
+    .replace(/^\/api\/?/, '')
+    .replace(/^\/+/, '');
 }
 
 function errorResponse(error, headers) {
