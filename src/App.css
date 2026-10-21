@@ -261,9 +261,7 @@
   border-radius: 1.7rem;
   display: grid;
   place-items: center;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(232, 244, 241, 0.9)),
-    var(--white);
+  background: #e8f4f1;
   border: 1px solid rgba(11, 124, 114, 0.12);
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
   color: var(--primary-dark);
@@ -489,9 +487,7 @@
 .page-panel {
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 250, 251, 0.92)),
-    var(--white);
+  background: var(--white);
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 1.8rem;
   padding: 1.5rem;
@@ -506,7 +502,8 @@
   inset: 0 auto auto 0;
   width: 160px;
   height: 160px;
-  background: radial-gradient(circle, rgba(11, 124, 114, 0.07), transparent 68%);
+  background: rgba(11, 124, 114, 0.06);
+  border-radius: 50%;
   pointer-events: none;
 }
 
@@ -555,22 +552,22 @@
 }
 
 .stat-icon.purple {
-  background: linear-gradient(135deg, rgba(11, 124, 114, 0.14), rgba(11, 124, 114, 0.06));
+  background: rgba(11, 124, 114, 0.1);
   color: var(--primary-dark);
 }
 
 .stat-icon.green {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.06));
+  background: rgba(34, 197, 94, 0.1);
   color: #16803d;
 }
 
 .stat-icon.amber {
-  background: linear-gradient(135deg, rgba(244, 162, 97, 0.22), rgba(244, 162, 97, 0.08));
+  background: rgba(244, 162, 97, 0.15);
   color: #9a4f10;
 }
 
 .stat-icon.blue {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0.06));
+  background: rgba(59, 130, 246, 0.1);
   color: #1d4ed8;
 }
 
@@ -974,7 +971,7 @@
 }
 
 .builder-option-letter.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   border-color: transparent;
   color: var(--white);
   box-shadow: 0 16px 24px rgba(11, 124, 114, 0.2);
@@ -1023,7 +1020,7 @@
 }
 
 .marking-tab.active {
-  background: linear-gradient(135deg, rgba(11, 124, 114, 0.1), rgba(11, 124, 114, 0.04));
+  background: rgba(11, 124, 114, 0.08);
   color: var(--primary-dark);
 }
 
@@ -1040,7 +1037,7 @@
   align-items: center;
   gap: var(--space-4);
   padding: 1.1rem 1.25rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 251, 252, 0.92));
+  background: #f8fbfc;
 }
 
 .submission-avatar {
@@ -1049,7 +1046,7 @@
   display: grid;
   place-items: center;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(11, 124, 114, 0.14), rgba(244, 162, 97, 0.18));
+  background: rgba(11, 124, 114, 0.1);
   color: var(--primary-dark);
   font-size: var(--text-sm);
   font-weight: 800;
@@ -1201,7 +1198,7 @@
 
 .student-nav-link.active,
 .student-bottom-link.active {
-  background: linear-gradient(135deg, rgba(11, 124, 114, 0.12), rgba(11, 124, 114, 0.06));
+  background: rgba(11, 124, 114, 0.09);
   color: var(--primary-dark);
 }
 
@@ -1375,7 +1372,7 @@
   display: inline-grid;
   place-items: center;
   border-radius: 0.85rem;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   color: var(--white);
   font-size: var(--text-xs);
   font-weight: 800;
@@ -1427,7 +1424,7 @@
 
 .mcq-option.selected .mcq-option-radio {
   border-color: var(--primary);
-  background: radial-gradient(circle, var(--primary) 0 48%, transparent 54%);
+  background: var(--primary);
 }
 
 .mcq-option-label {
@@ -1868,7 +1865,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f87171, #dc2626);
+  background: #dc2626;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 800;
@@ -1923,7 +1920,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f87171, #dc2626);
+  background: #dc2626;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 800;
@@ -1959,7 +1956,7 @@
   display: grid;
   place-items: center;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(11, 124, 114, 0.14), rgba(11, 124, 114, 0.06));
+  background: rgba(11, 124, 114, 0.1);
   color: var(--primary-dark);
   font-size: var(--text-xs);
   font-weight: 800;

@@ -11,10 +11,7 @@ const css = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background:
-      radial-gradient(circle at top left, rgba(244, 162, 97, 0.12), transparent 24%),
-      radial-gradient(circle at top right, rgba(11, 124, 114, 0.1), transparent 22%),
-      linear-gradient(180deg, #f7fafb 0%, #eef4f6 100%);
+    background: #f7fafb;
     padding: 24px;
     font-family: var(--font-body);
   }
@@ -23,9 +20,7 @@ const css = `
     max-width: 480px;
     width: 100%;
     text-align: center;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,250,251,0.92)),
-      #fff;
+    background: #fff;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-radius: 1.8rem;
     padding: 3rem 2rem;
@@ -41,7 +36,8 @@ const css = `
     position: absolute;
     top: 0; left: 0;
     width: 160px; height: 160px;
-    background: radial-gradient(circle, rgba(11, 124, 114, 0.07), transparent 68%);
+    background: rgba(11, 124, 114, 0.06);
+    border-radius: 50%;
     pointer-events: none;
   }
 
@@ -52,13 +48,13 @@ const css = `
     display: grid;
     place-items: center;
     border-radius: 1.5rem;
-    background: linear-gradient(135deg, rgba(11, 124, 114, 0.14), rgba(11, 124, 114, 0.06));
+    background: rgba(11, 124, 114, 0.1);
     color: var(--primary-dark, #07645e);
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
   }
 
   .pending-icon-wrap.rejected {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(239, 68, 68, 0.06));
+    background: rgba(239, 68, 68, 0.1);
     color: #b42318;
   }
 
@@ -100,7 +96,7 @@ const css = `
   }
 
   .pending-btn-primary {
-    background: linear-gradient(135deg, var(--primary, #0b7c72), var(--primary-dark, #07645e));
+    background: var(--primary, #0b7c72);
     color: #fff;
     box-shadow: 0 12px 24px rgba(11, 124, 114, 0.2);
   }
