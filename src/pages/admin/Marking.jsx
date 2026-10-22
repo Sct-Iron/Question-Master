@@ -15,17 +15,29 @@ export default function Marking() {
   const [essayScores, setEssayScores] = useState({});
   const [saving, setSaving] = useState(null);
   const [feedback, setFeedback] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setLoadError('');
       try {
         const snap = await getDocs(collection(db, 'submissions'));
         const all = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
         all.sort((a, b) => (b.submittedAt?.seconds || 0) - (a.submittedAt?.seconds || 0));
         setSubmissions(all);
+        const missingAnswerKeys = all.reduce(
+          (count, submission) => count + (submission.answers || []).filter(
+            (answer) => answer.type === 'mcq' && !answer.correctAnswer
+          ).length,
+          0
+        );
+        if (missingAnswerKeys > 0) {
+          setLoadError(`${missingAnswerKeys} older multiple-choice answer${missingAnswerKeys === 1 ? ' is' : 's are'} missing a saved correct answer. The current quiz key cannot reliably restore historical answers; those will show as unavailable.`);
+        }
       } catch (err) {
         console.error('Error fetching submissions:', err);
+        setLoadError('Failed to load submissions. Please refresh and try again.');
       }
       setLoading(false);
     }
@@ -194,6 +206,8 @@ export default function Marking() {
           </div>
         )}
 
+        {loadError && <div className="auth-error page-alert" role="alert">{loadError}</div>}
+
         {loading && (
           <div className="empty-state">
             <div className="empty-state-icon"><CheckCircleIcon size={30} /></div>
@@ -312,7 +326,11 @@ export default function Marking() {
                                 color: answer.isCorrect ? '#047857' : '#b91c1c',
                               }}
                             >
-                              {answer.isCorrect ? 'Correct • 1/1' : `Wrong • 0/1 • Correct answer: ${answer.correctAnswer}`}
+                              {answer.isCorrect
+                                ? 'Correct • 1/1'
+                                : `Wrong • 0/1 • Correct answer: ${answer.correctAnswer
+                                  ? `${answer.correctAnswer}${answer.correctAnswerText ? ` - ${answer.correctAnswerText}` : ''}`
+                                  : 'Unavailable'}`}
                             </div>
                           )}
 

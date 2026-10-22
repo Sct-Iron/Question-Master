@@ -225,7 +225,7 @@ export default function ViewResults() {
                               <strong>{answer.answer || '-' }.</strong> {answer.answerText || 'No answer'}
                               {!answer.isCorrect && (
                                 <div style={{ marginTop: '6px', color: '#047857', fontSize: '0.85em' }}>
-                                  Correct: <strong>{answer.correctAnswer}.</strong>
+                                  Correct: <strong>{answer.correctAnswer || 'Unavailable'}{answer.correctAnswer ? '.' : ''}</strong>
                                 </div>
                               )}
                             </div>

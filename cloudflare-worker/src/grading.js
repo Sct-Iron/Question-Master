@@ -68,19 +68,7 @@ export async function releaseResults(request, env, user) {
   if ((submission.answers || []).some((answer) => answer.type === 'essay' && (answer.score === null || answer.score === undefined))) {
     throw new Error('FAILED_PRECONDITION');
   }
-  const keyDocument = await getDocument(env, `quizAnswerKeys/${submission.quizId}`);
-  const questions = quizDocument.data.questions || [];
-  const keys = new Map((keyDocument?.data.questions || questions.map((question, index) => ({
-    id: question.id || `q-${index + 1}`,
-    correctAnswer: question.correctAnswer || null,
-  }))).map((item) => [item.id, item]));
-  const answers = (submission.answers || []).map((answer, index) => {
-    if (answer.type !== 'mcq') return answer;
-    const question = questions[index];
-    return { ...answer, correctAnswer: keys.get(question?.id)?.correctAnswer || null };
-  });
   await setDocument(env, `submissions/${submissionId}`, {
-    answers,
     isReleased: true,
     releasedAt: new Date(),
   });

@@ -110,6 +110,8 @@ export async function submitQuiz(request, env) {
         answer: answerValue,
         answerText: question.options?.[answerValue] || '',
         isCorrect,
+        correctAnswer: key?.correctAnswer ?? null,
+        correctAnswerText: question.options?.[key?.correctAnswer] || '',
       };
     }
     const maxPoints = Number(key?.maxPoints || question.maxPoints || 1);
@@ -164,7 +166,16 @@ export async function expireQuizAttempts(env) {
       const id = question.id || `q-${index + 1}`;
       const key = keys.get(id);
       if (question.type === 'mcq') {
-        return { questionIndex: index, questionText: question.text, type: 'mcq', answer: '', answerText: '', isCorrect: false };
+        return {
+          questionIndex: index,
+          questionText: question.text,
+          type: 'mcq',
+          answer: '',
+          answerText: '',
+          isCorrect: false,
+          correctAnswer: key?.correctAnswer ?? null,
+          correctAnswerText: question.options?.[key?.correctAnswer] || '',
+        };
       }
       return {
         questionIndex: index,
