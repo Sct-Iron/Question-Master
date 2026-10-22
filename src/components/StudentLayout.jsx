@@ -10,6 +10,10 @@ function StudentLayout() {
   const location = useLocation();
   const { userName } = useAuth();
   const [quizInProgress, setQuizInProgress] = useState(false);
+  const [quizLogoutHandler, setQuizLogoutHandler] = useState(null);
+  const [logoutPromptOpen, setLogoutPromptOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
 
   useEffect(() => {
     if (quizInProgress && location.pathname !== '/student/take-quiz') {
@@ -17,9 +21,59 @@ function StudentLayout() {
     }
   }, [location.pathname, navigate, quizInProgress]);
 
+  useEffect(() => {
+    if (!logoutPromptOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !loggingOut) {
+        setLogoutPromptOpen(false);
+        setLogoutError('');
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [loggingOut, logoutPromptOpen]);
+
   const handleLogout = async () => {
+    if (quizInProgress) {
+      setLogoutError('');
+      setLogoutPromptOpen(true);
+      return;
+    }
+
     await signOut(auth);
     navigate('/auth', { replace: true });
+  };
+
+  const cancelLogout = () => {
+    if (loggingOut) return;
+    setLogoutPromptOpen(false);
+    setLogoutError('');
+  };
+
+  const confirmLogout = async () => {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError('');
+
+    try {
+      if (typeof quizLogoutHandler !== 'function') {
+        throw new Error('The quiz could not be submitted. Please try again.');
+      }
+
+      const submitted = await quizLogoutHandler();
+      if (!submitted) {
+        throw new Error('The quiz could not be submitted. Please try again.');
+      }
+
+      await signOut(auth);
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      setLogoutError(error?.message || 'The quiz could not be submitted. Please try again.');
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -65,7 +119,34 @@ function StudentLayout() {
         Welcome, {userName || 'Student'}
       </div>
 
-      <Outlet context={{ quizInProgress, setQuizInProgress }} />
+      <Outlet context={{ quizInProgress, setQuizInProgress, setQuizLogoutHandler }} />
+
+      {logoutPromptOpen && (
+        <div className="logout-dialog-backdrop" role="presentation">
+          <div
+            className="logout-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-dialog-title"
+            aria-describedby="logout-dialog-description"
+          >
+            <div className="logout-dialog-icon"><LogoutIcon size={22} /></div>
+            <h2 id="logout-dialog-title">Are You Sure You Want To Logout?</h2>
+            <p id="logout-dialog-description">
+              This Quiz Will Be Submitted Automatically.
+            </p>
+            {logoutError && <p className="logout-dialog-error" role="alert">{logoutError}</p>}
+            <div className="logout-dialog-actions">
+              <button className="btn btn-outline" type="button" onClick={cancelLogout} disabled={loggingOut}>
+                No, Continue Quiz
+              </button>
+              <button className="btn btn-danger" type="button" onClick={confirmLogout} disabled={loggingOut}>
+                {loggingOut ? 'Submitting...' : 'Yes, Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!quizInProgress && <nav className="student-bottom-nav">
         <NavLink

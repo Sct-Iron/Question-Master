@@ -8,7 +8,7 @@ import { AlertIcon, ArrowLeftIcon, CheckCircleIcon, QuizIcon, SearchIcon, TimerI
 import { formatRemainingTime, formatTimeLimit, parseTimeLimit } from '../../utils/scoring';
 
 export default function TakeQuiz() {
-  const { setQuizInProgress } = useOutletContext();
+  const { setQuizInProgress, setQuizLogoutHandler } = useOutletContext();
   const { user } = useAuth();
   const [view, setView] = useState('browse');
   const [quizzes, setQuizzes] = useState([]);
@@ -113,7 +113,7 @@ export default function TakeQuiz() {
   }
 
   async function handleSubmit(forceSubmit = false) {
-    if (!activeQuiz || submitting) return;
+    if (!activeQuiz || submitting) return false;
     setSubmitError('');
 
     const unanswered = activeQuiz.questions.filter(
@@ -137,17 +137,30 @@ export default function TakeQuiz() {
       setView('submitted');
       setQuizInProgress(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
     } catch (err) {
       console.error('Submit error:', err);
       setSubmitError(`Failed to submit. (${err?.code || err?.message || 'unknown'})`);
+      return false;
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   }
 
   const submitDueToTimer = useEffectEvent(() => {
     handleSubmit(true);
   });
+
+  const submitForLogout = useEffectEvent(() => handleSubmit(true));
+
+  useEffect(() => {
+    const logoutHandler = view === 'quiz' && activeQuiz && attemptId
+      ? submitForLogout
+      : null;
+
+    setQuizLogoutHandler(() => logoutHandler);
+    return () => setQuizLogoutHandler(null);
+  }, [activeQuiz, attemptId, setQuizLogoutHandler, view]);
 
   useEffect(() => {
     if (view === 'quiz' && activeQuiz && remainingSeconds === 0 && !submitting) {

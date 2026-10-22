@@ -8,7 +8,7 @@ function firestoreDocumentName(env, path) {
   return `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
 }
 
-function firestoreValue(value) {
+export function firestoreValue(value) {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'boolean') return { booleanValue: value };
   if (typeof value === 'number') {
@@ -25,7 +25,7 @@ function firestoreValue(value) {
   throw new Error('Unsupported Firestore value.');
 }
 
-function fromFirestoreValue(value) {
+export function fromFirestoreValue(value) {
   if (!value) return null;
   if ('nullValue' in value) return null;
   if ('booleanValue' in value) return value.booleanValue;
@@ -129,12 +129,7 @@ export async function queryDocuments(env, collectionId, where) {
       authorization: `Bearer ${await googleAccessToken(env)}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      structuredQuery: {
-        from: [{ collectionId }],
-        ...(where ? { where } : {}),
-      },
-    }),
+    body: JSON.stringify({ structuredQuery: buildStructuredQuery(collectionId, where) }),
   });
   if (!response.ok) throw new Error(`Firestore query failed with status ${response.status}.`);
   const rows = await response.json();
@@ -143,6 +138,13 @@ export async function queryDocuments(env, collectionId, where) {
     data: fromFirestoreFields(row.document.fields || {}),
     updateTime: row.document.updateTime,
   }));
+}
+
+export function buildStructuredQuery(collectionId, where) {
+  return {
+    from: [{ collectionId }],
+    ...(where ? { where } : {}),
+  };
 }
 
 export function fieldEquals(fieldPath, value) {

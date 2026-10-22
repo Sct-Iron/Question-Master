@@ -28,6 +28,14 @@ function answerKeys(quiz, keyDocument) {
   }));
 }
 
+export function isAttemptExpired(deadlineAt, now = new Date()) {
+  if (!deadlineAt) return false;
+  const deadlineMilliseconds = deadlineAt instanceof Date
+    ? deadlineAt.getTime()
+    : Number(deadlineAt.seconds || 0) * 1000 + Number(deadlineAt.nanoseconds || 0) / 1000000;
+  return Number.isFinite(deadlineMilliseconds) && now.getTime() >= deadlineMilliseconds;
+}
+
 export async function startQuiz(request, env) {
   const user = await requireFirebaseUser(request, env);
   const data = await request.json();
@@ -91,7 +99,7 @@ export async function submitQuiz(request, env) {
   const questions = quiz.questions || [];
   const keys = new Map(answerKeys(quiz, keyDocument).map((item) => [item.id, item]));
   const now = new Date();
-  const expired = attempt.deadlineAt && now.getTime() > (attempt.deadlineAt.seconds * 1000 + attempt.deadlineAt.nanoseconds / 1000000);
+  const expired = isAttemptExpired(attempt.deadlineAt, now);
   let mcqScore = 0;
   let mcqTotal = 0;
   let essayTotal = 0;
