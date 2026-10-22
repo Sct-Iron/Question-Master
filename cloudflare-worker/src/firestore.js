@@ -73,7 +73,11 @@ export async function getDocument(env, path) {
 }
 
 export async function setDocument(env, path, data) {
-  const document = await firestoreFetch(env, documentPath(path), {
+  const updateMask = new URLSearchParams();
+  for (const fieldPath of Object.keys(data)) {
+    updateMask.append('updateMask.fieldPaths', fieldPath);
+  }
+  const document = await firestoreFetch(env, `${documentPath(path)}?${updateMask}`, {
     method: 'PATCH',
     body: JSON.stringify({
       fields: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, firestoreValue(value)])),

@@ -47,9 +47,11 @@ function errorResponse(error, headers) {
     FORBIDDEN: 403,
     NOT_FOUND: 404,
     ALREADY_EXISTS: 409,
+    FAILED_PRECONDITION: 409,
     INVALID_ARGUMENT: 400,
   };
   const status = statusByCode[error.code] || 500;
+  if (status === 500) console.error('Worker request failed:', error);
   return json({ error: status === 500 ? 'Internal server error.' : error.message }, status, headers);
 }
 

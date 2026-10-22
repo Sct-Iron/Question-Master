@@ -337,7 +337,7 @@ export default function Marking() {
                           {answer.type === 'essay' && !submission.isReleased && (
                             <div className="submission-score-input">
                               <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-600)' }}>
-                                Score (0 - {answer.maxPoints ?? 1}):
+                                Score:
                               </label>
                               <input
                                 className="score-field"

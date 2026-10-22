@@ -404,7 +404,7 @@ export default function TakeQuiz() {
                   </div>
                   <div className="student-quiz-card-tags">
                     {mcqCount > 0 && <span className="badge badge-primary">Multiple Choice</span>}
-                    {essayCount > 0 && <span className="badge badge-accent">Written</span>}
+                    {essayCount > 0 && <span className="badge badge-accent">Essay</span>}
                     {timeLimitMinutes && (
                       <span className="badge badge-warning">
                         <TimerIcon size={13} />
