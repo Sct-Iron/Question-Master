@@ -1,7 +1,7 @@
 import { requireFirebaseUser } from './auth.js';
 import { deleteQuiz, getQuizEditor, listPublishedQuizzes, saveQuiz } from './handlers.js';
 import { expireQuizAttempts, startQuiz, submitQuiz } from './attempts.js';
-import { releaseResults, saveMarks } from './grading.js';
+import { hydrateReleasedSubmission, releaseResults, saveMarks } from './grading.js';
 import { approveAdmin, listAdmins, rejectAdmin } from './admin.js';
 
 function json(data, status = 200, headers = {}) {
@@ -75,6 +75,7 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, headers);
       if (route === 'startQuiz') return json(await startQuiz(request, env), 200, headers);
       if (route === 'submitQuiz') return json(await submitQuiz(request, env), 200, headers);
+      if (route === 'hydrateReleasedSubmission') return json(await hydrateReleasedSubmission(request, env, user), 200, headers);
       if (route === 'saveMarks') return json(await saveMarks(request, env, user), 200, headers);
       if (route === 'releaseResults') return json(await releaseResults(request, env, user), 200, headers);
       if (route === 'listAdmins') return json(await listAdmins(env, user), 200, headers);

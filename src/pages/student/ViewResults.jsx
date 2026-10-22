@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/useAuth';
+import { callBackend } from '../../api/backend';
 import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, QuizIcon, ResultsIcon, TimerIcon } from '../../components/Icons';
 import { getSubmissionTotals, normalizeEssayScore } from '../../utils/scoring';
 
@@ -10,12 +11,14 @@ export default function ViewResults() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (!user) return;
 
     async function fetchResults() {
       setLoading(true);
+      setLoadError('');
       try {
         const submissionQuery = query(
           collection(db, 'submissions'),
@@ -30,9 +33,30 @@ export default function ViewResults() {
             const bTime = b.releasedAt?.seconds || b.submittedAt?.seconds || 0;
             return bTime - aTime;
           });
-        setSubmissions(mySubmissions);
+        let failedAnswerRecovery = false;
+        const submissionsWithAnswers = await Promise.all(mySubmissions.map(async (submission) => {
+          // Old submissions may predate answer snapshots; recover only incorrect MCQs missing key data.
+          const needsRecovery = (submission.answers || []).some(
+            (answer) => answer.type === 'mcq' && !answer.isCorrect
+              && (!answer.correctAnswer || !answer.correctAnswerText)
+          );
+          if (!needsRecovery) return submission;
+          try {
+            const response = await callBackend('hydrateReleasedSubmission', { submissionId: submission.id });
+            return { ...submission, answers: response.data.answers };
+          } catch (error) {
+            console.error(`Error restoring correct answers for submission ${submission.id}:`, error);
+            failedAnswerRecovery = true;
+            return submission;
+          }
+        }));
+        setSubmissions(submissionsWithAnswers);
+        if (failedAnswerRecovery) {
+          setLoadError('Some correct answers could not be restored. Please contact your teacher.');
+        }
       } catch (err) {
         console.error('Error loading results:', err);
+        setLoadError('Failed to load results. Please refresh and try again.');
       }
       setLoading(false);
     }
@@ -97,6 +121,21 @@ export default function ViewResults() {
       </div>
 
       <div className="results-list">
+        {loadError && (
+          <div
+            role="alert"
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              marginBottom: 'var(--space-4)',
+              border: '1px solid var(--error-light)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--error-light)',
+              color: 'var(--error)',
+            }}
+          >
+            {loadError}
+          </div>
+        )}
         {submissions.map((submission, index) => {
           const isOpen = expanded === submission.id;
           const totals = getSubmissionTotals(submission.answers);
@@ -226,6 +265,7 @@ export default function ViewResults() {
                               {!answer.isCorrect && (
                                 <div style={{ marginTop: '6px', color: '#047857', fontSize: '0.85em' }}>
                                   Correct: <strong>{answer.correctAnswer || 'Unavailable'}{answer.correctAnswer ? '.' : ''}</strong>
+                                  {answer.correctAnswerText ? ` ${answer.correctAnswerText}` : ''}
                                 </div>
                               )}
                             </div>

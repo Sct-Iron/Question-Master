@@ -27,3 +27,5 @@ V2_IMPLEMENTATION_PLAN.md
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

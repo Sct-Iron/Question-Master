@@ -16,6 +16,54 @@ function assertQuizOwner(quiz, user) {
   if (!quiz || (quiz.createdBy?.uid !== user.uid && !user.isSuperAdmin)) throw new Error('FORBIDDEN');
 }
 
+function hydrateCorrectAnswers(answers, quiz, keyDocument) {
+  const questions = quiz.questions || [];
+  // Prefer the private key snapshot; older quizzes may still keep keys on their question data.
+  const answerKeys = new Map((keyDocument?.data?.questions || questions.map((question, index) => ({
+    id: question.id || `q-${index + 1}`,
+    correctAnswer: question.correctAnswer || null,
+  }))).map((item) => [item.id, item]));
+
+  return answers.map((answer, index) => {
+    if (answer.type !== 'mcq') return answer;
+    const questionIndex = Number.isInteger(answer.questionIndex) ? answer.questionIndex : index;
+    const question = questions[questionIndex];
+    const questionId = question?.id || `q-${questionIndex + 1}`;
+    const correctAnswer = answer.correctAnswer || answerKeys.get(questionId)?.correctAnswer || null;
+    const correctAnswerText = answer.correctAnswerText || question?.options?.[correctAnswer] || '';
+    if (correctAnswer === answer.correctAnswer && correctAnswerText === answer.correctAnswerText) return answer;
+    return { ...answer, correctAnswer, correctAnswerText };
+  });
+}
+
+export async function hydrateReleasedSubmission(request, env, user) {
+  const data = await request.json();
+  const submissionId = requiredString(data.submissionId, 'Submission ID');
+  const submissionDocument = await getDocument(env, `submissions/${submissionId}`);
+  if (!submissionDocument || submissionDocument.data.studentId !== user.uid || submissionDocument.data.isReleased !== true) {
+    throw new Error('NOT_FOUND');
+  }
+  const submission = submissionDocument.data;
+  const answers = submission.answers || [];
+  if (!submission.quizId || !answers.some(
+    (answer) => answer.type === 'mcq' && (!answer.correctAnswer || !answer.correctAnswerText)
+  )) {
+    return { answers };
+  }
+
+  // Only the owning student may recover missing answer details for an already released result.
+  const [quizDocument, keyDocument] = await Promise.all([
+    getDocument(env, `quizzes/${submission.quizId}`),
+    getDocument(env, `quizAnswerKeys/${submission.quizId}`),
+  ]);
+  if (!quizDocument) return { answers };
+  const hydratedAnswers = hydrateCorrectAnswers(answers, quizDocument.data, keyDocument);
+  if (hydratedAnswers.some((answer, index) => answer !== answers[index])) {
+    await setDocument(env, `submissions/${submissionId}`, { answers: hydratedAnswers });
+  }
+  return { answers: hydratedAnswers };
+}
+
 export async function saveMarks(request, env, user) {
   requireAdmin(user);
   const data = await request.json();
@@ -62,15 +110,29 @@ export async function releaseResults(request, env, user) {
   const submissionDocument = await getDocument(env, `submissions/${submissionId}`);
   if (!submissionDocument) throw new Error('NOT_FOUND');
   const submission = submissionDocument.data;
-  if (submission.isReleased) return { ok: true };
+  const answers = submission.answers || [];
+  const hasMissingCorrectAnswers = answers.some(
+    (answer) => answer.type === 'mcq' && (!answer.correctAnswer || !answer.correctAnswerText)
+  );
+  // Idempotent release calls also repair legacy submissions without changing their release state.
+  if (submission.isReleased && !hasMissingCorrectAnswers) return { ok: true };
   const quizDocument = await getDocument(env, `quizzes/${submission.quizId}`);
   assertQuizOwner(quizDocument?.data, user);
-  if ((submission.answers || []).some((answer) => answer.type === 'essay' && (answer.score === null || answer.score === undefined))) {
+  if (!submission.isReleased && answers.some(
+    (answer) => answer.type === 'essay' && (answer.score === null || answer.score === undefined)
+  )) {
     throw new Error('FAILED_PRECONDITION');
   }
-  await setDocument(env, `submissions/${submissionId}`, {
-    isReleased: true,
-    releasedAt: new Date(),
-  });
+  const keyDocument = await getDocument(env, `quizAnswerKeys/${submission.quizId}`);
+  const releasedAnswers = hydrateCorrectAnswers(answers, quizDocument.data, keyDocument);
+  const updates = {};
+  if (releasedAnswers.some((answer, index) => answer !== answers[index])) updates.answers = releasedAnswers;
+  if (!submission.isReleased) {
+    updates.isReleased = true;
+    updates.releasedAt = new Date();
+  }
+  if (Object.keys(updates).length > 0) {
+    await setDocument(env, `submissions/${submissionId}`, updates);
+  }
   return { ok: true };
 }
